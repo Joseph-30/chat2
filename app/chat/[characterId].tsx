@@ -15,17 +15,12 @@ export default function ChatScreen() {
   const [conversation, setConversation] = useState<ConversationState | null>(null);
   const [character, setCharacter] = useState<Character | null>(null);
   const [showEmotion, setShowEmotion] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isChoiceLoading, setIsChoiceLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
     loadConversation();
-    
-    // Set up interval to refresh conversation state
-    const interval = setInterval(() => {
-      loadConversation();
-    }, 1000);
-
-    return () => clearInterval(interval);
   }, [characterId]);
 
   useEffect(() => {
@@ -38,23 +33,39 @@ export default function ChatScreen() {
   const loadConversation = async () => {
     if (!characterId) return;
 
-    const storyService = StoryService.getInstance();
-    const state = storyService.getGameState();
-    
-    if (state) {
+    setIsLoading(true);
+    try {
+      const storyService = StoryService.getInstance();
+      
+      // First ensure we have a game state
+      let state = storyService.getGameState();
+      if (!state) {
+        // Try to load from storage
+        state = await storyService.loadGame();
+        if (!state) {
+          // Initialize new game if nothing exists
+          state = await storyService.initializeGame('Player');
+        }
+      }
+      
       setGameState(state);
       setCharacter(state.characters[characterId]);
       
       if (state.conversations[characterId]) {
         setConversation(state.conversations[characterId]);
       } else {
-        try {
-          const newConversation = await storyService.startConversation(characterId);
-          setConversation(newConversation);
-        } catch (error) {
-          console.error('Failed to start conversation:', error);
+        const newConversation = await storyService.startConversation(characterId);
+        setConversation(newConversation);
+        // Update game state after starting conversation
+        const updatedState = storyService.getGameState();
+        if (updatedState) {
+          setGameState(updatedState);
         }
       }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,20 +101,35 @@ export default function ChatScreen() {
   };
 
   const handleChoicePress = async (choiceId: string) => {
-    if (!characterId) return;
+    if (!characterId || isChoiceLoading) return;
 
+    setIsChoiceLoading(true);
     try {
       const storyService = StoryService.getInstance();
-      await storyService.makeChoice(characterId, choiceId);
       
       // Show temporary emotion overlay
       setShowEmotion('thinking...');
+      
+      // Make choice and get updated conversation
+      const updatedConversation = await storyService.makeChoice(characterId, choiceId);
+      
+      // Update local state immediately
+      setConversation(updatedConversation);
+      
+      // Update game state
+      const newGameState = storyService.getGameState();
+      if (newGameState) {
+        setGameState(newGameState);
+        setCharacter(newGameState.characters[characterId]);
+      }
+      
       setTimeout(() => setShowEmotion(null), 1500);
       
-      // Refresh conversation
-      await loadConversation();
     } catch (error) {
       console.error('Failed to make choice:', error);
+      setShowEmotion(null);
+    } finally {
+      setIsChoiceLoading(false);
     }
   };
 
@@ -123,11 +149,13 @@ export default function ChatScreen() {
     }
   }, [conversation?.messages.length]);
 
-  if (!character || !conversation) {
+  if (!character || !conversation || isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading conversation...</Text>
+          <Text style={styles.loadingText}>
+            {isLoading ? 'Loading conversation...' : 'Connecting...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -193,7 +221,7 @@ export default function ChatScreen() {
       )}
 
       {/* Choice Buttons */}
-      {conversation.isWaitingForResponse && conversation.availableChoices.length > 0 && (
+      {conversation.isWaitingForResponse && conversation.availableChoices.length > 0 && !isChoiceLoading && (
         <View style={styles.choicesContainer}>
           {conversation.availableChoices.map((choice, index) => (
             <ChoiceButton
@@ -203,6 +231,13 @@ export default function ChatScreen() {
               index={index}
             />
           ))}
+        </View>
+      )}
+
+      {/* Loading State for Choices */}
+      {isChoiceLoading && (
+        <View style={styles.choicesContainer}>
+          <Text style={styles.loadingText}>Generating response...</Text>
         </View>
       )}
 

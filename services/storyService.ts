@@ -78,7 +78,27 @@ export class StoryService {
     try {
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
       if (savedData) {
-        this.gameState = JSON.parse(savedData);
+        const parsedData = JSON.parse(savedData);
+        
+        // Convert date strings back to Date objects
+        this.gameState = {
+          ...parsedData,
+          gameStarted: new Date(parsedData.gameStarted),
+          lastPlayed: new Date(parsedData.lastPlayed),
+          conversations: Object.fromEntries(
+            Object.entries(parsedData.conversations || {}).map(([id, conversation]: [string, any]) => [
+              id,
+              {
+                ...conversation,
+                messages: (conversation.messages || []).map((msg: any) => ({
+                  ...msg,
+                  timestamp: new Date(msg.timestamp)
+                }))
+              }
+            ])
+          )
+        };
+        
         return this.gameState;
       }
     } catch (error) {
@@ -92,7 +112,26 @@ export class StoryService {
     
     try {
       this.gameState.lastPlayed = new Date();
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.gameState));
+      // Create a serializable copy of the game state
+      const gameStateToSave = {
+        ...this.gameState,
+        gameStarted: this.gameState.gameStarted.toISOString(),
+        lastPlayed: this.gameState.lastPlayed.toISOString(),
+        conversations: Object.fromEntries(
+          Object.entries(this.gameState.conversations).map(([id, conversation]) => [
+            id,
+            {
+              ...conversation,
+              messages: conversation.messages.map(msg => ({
+                ...msg,
+                timestamp: msg.timestamp.toISOString()
+              }))
+            }
+          ])
+        )
+      };
+      
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(gameStateToSave));
     } catch (error) {
       console.error('Failed to save game:', error);
     }
@@ -120,10 +159,20 @@ export class StoryService {
         context
       );
 
+      // Validate the opening message and create fallback if needed
+      let messageText = openingMessage;
+      if (!openingMessage || openingMessage.length < 5 || openingMessage.includes('Something went wrong')) {
+        console.error('Invalid opening message received:', openingMessage);
+        // Use a fallback message
+        messageText = character.id === 'alex' 
+          ? `Hey ${this.gameState.playerName}! Something strange is happening in town...`
+          : `Hello... I need to tell you something important.`;
+      }
+      
       const initialMessage: Message = {
         id: Date.now().toString(),
         senderId: characterId,
-        text: openingMessage,
+        text: messageText,
         timestamp: new Date(),
         type: 'text',
         isRead: false
@@ -151,7 +200,7 @@ export class StoryService {
     return this.gameState.conversations[characterId];
   }
 
-  async makeChoice(characterId: string, choiceId: string): Promise<void> {
+  async makeChoice(characterId: string, choiceId: string): Promise<ConversationState> {
     if (!this.gameState) throw new Error('Game not initialized');
 
     const conversation = this.gameState.conversations[characterId];
@@ -197,6 +246,8 @@ export class StoryService {
     conversation.isWaitingForResponse = false;
     await this.generateAIResponse(characterId, choice.consequence);
     await this.saveGame();
+    
+    return conversation;
   }
 
   private async generateAIResponse(characterId: string, choiceConsequence: string): Promise<void> {
@@ -205,60 +256,91 @@ export class StoryService {
     const conversation = this.gameState.conversations[characterId];
     const character = this.gameState.characters[characterId];
 
-    // Show typing indicator
-    const typingMessage: Message = {
-      id: `typing_${Date.now()}`,
-      senderId: characterId,
-      text: '...',
-      timestamp: new Date(),
-      type: 'text',
-      isTyping: true
+    const context = {
+      character,
+      playerName: this.gameState.playerName,
+      choiceConsequence,
+      relationshipLevel: character.relationshipLevel,
+      conversationHistory: conversation.messages.slice(-5).map(m => ({ 
+        sender: m.senderId === 'player' ? 'player' : character.name, 
+        message: m.text 
+      })),
+      chapter: this.gameState.currentChapter,
+      totalMessages: conversation.messages.length,
+      gameFlags: this.gameState.globalFlags
     };
 
-    conversation.messages.push(typingMessage);
+    // Generate AI response
+    const aiResponse = await this.geminiService.generateStoryContent(
+      `Continue the interactive horror/romance story. ${character.name} is responding to the player's choice. 
+      Consequence: ${choiceConsequence}. 
+      Make the response engaging and advance the story. Reference previous conversation context.
+      Keep it under 120 characters for mobile chat.`,
+      context
+    );
 
-    // Simulate typing delay
-    setTimeout(async () => {
-      // Remove typing indicator
-      conversation.messages = conversation.messages.filter(m => !m.isTyping);
+    // Validate AI response and provide fallback
+    let responseText = aiResponse;
+    if (!aiResponse || aiResponse.length < 5 || aiResponse.includes('Something went wrong')) {
+      console.error('Invalid AI response received:', aiResponse);
+      // Use contextual fallback based on character
+      if (character.id === 'alex') {
+        responseText = "That's... not what I expected. Let me think about this.";
+      } else if (character.id === 'maya') {
+        responseText = "Interesting choice. The data suggests this could work.";
+      } else {
+        responseText = "Your choice has consequences... we'll see what happens.";
+      }
+    }
 
-      const context = {
-        character,
-        playerName: this.gameState!.playerName,
-        choiceConsequence,
-        relationshipLevel: character.relationshipLevel,
-        conversationHistory: conversation.messages.slice(-5),
-        chapter: this.gameState!.currentChapter
-      };
+    const aiMessage: Message = {
+      id: Date.now().toString(),
+      senderId: characterId,
+      text: responseText,
+      timestamp: new Date(),
+      type: 'text',
+      isRead: false
+    };
 
-      const aiResponse = await this.geminiService.generateStoryContent(
-        `Generate ${character.name}'s response to the player's choice. Consequence: ${choiceConsequence}`,
-        context
-      );
+    conversation.messages.push(aiMessage);
 
-      const aiMessage: Message = {
-        id: Date.now().toString(),
-        senderId: characterId,
-        text: aiResponse,
-        timestamp: new Date(),
-        type: 'text',
-        isRead: false
-      };
+    // Generate new intelligent choices for next interaction
+    const newChoices = await this.geminiService.generateChoices({
+      ...context,
+      lastAIResponse: aiResponse,
+      storyProgression: this.calculateStoryProgression(characterId),
+      relationshipTier: this.getRelationshipTier(character.relationshipLevel)
+    }, characterId);
 
-      conversation.messages.push(aiMessage);
+    conversation.availableChoices = newChoices.map((choice, index) => ({
+      id: `choice_${Date.now()}_${index}`,
+      text: choice.text,
+      consequence: choice.consequence,
+      relationshipEffect: choice.relationshipEffect || { [characterId]: 0 }
+    }));
 
-      // Generate new choices for next interaction
-      const newChoices = await this.geminiService.generateChoices(context, characterId);
-      conversation.availableChoices = newChoices.map((choice, index) => ({
-        id: `choice_${Date.now()}_${index}`,
-        text: choice.text,
-        consequence: choice.consequence,
-        relationshipEffect: choice.relationshipEffect || { [characterId]: 0 }
-      }));
+    conversation.isWaitingForResponse = true;
+  }
 
-      conversation.isWaitingForResponse = true;
-      await this.saveGame();
-    }, 2000);
+  private calculateStoryProgression(characterId: string): string {
+    if (!this.gameState) return 'beginning';
+    
+    const conversation = this.gameState.conversations[characterId];
+    const messageCount = conversation?.messages.length || 0;
+    
+    if (messageCount < 6) return 'beginning';
+    if (messageCount < 15) return 'developing';
+    if (messageCount < 25) return 'climax';
+    return 'resolution';
+  }
+
+  private getRelationshipTier(level: number): string {
+    if (level < -10) return 'hostile';
+    if (level < 0) return 'unfriendly';
+    if (level < 5) return 'neutral';
+    if (level < 15) return 'friendly';
+    if (level < 25) return 'close';
+    return 'intimate';
   }
 
   getGameState(): GameState | null {
