@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
-import { Trash2, Download, Moon, Sun, Volume2, VolumeX, LogOut, User, Edit3, Check, X } from 'lucide-react-native';
+import { Trash2, Download, Moon, Sun, Volume2, VolumeX, LogOut, User, CreditCard as Edit3, Check, X } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { GameState } from '../../types/story';
 
