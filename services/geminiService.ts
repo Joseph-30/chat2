@@ -201,7 +201,6 @@ export class GeminiService {
       }
       
       // Enhanced fallback choices based on context
-      const relationshipLevel = context.relationshipLevel || 0;
       const storyStage = context.storyProgression || 'developing';
       
       if (storyStage === 'beginning') {
