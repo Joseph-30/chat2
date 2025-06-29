@@ -368,8 +368,40 @@ export class StoryService {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
       this.gameState = null;
+      
+      // Force a complete reset by clearing any cached data
+      const keys = await AsyncStorage.getAllKeys();
+      const gameKeys = keys.filter(key => key.startsWith('STORY_') || key === STORAGE_KEY);
+      if (gameKeys.length > 0) {
+        await AsyncStorage.multiRemove(gameKeys);
+      }
     } catch (error) {
       console.error('Failed to reset game:', error);
+      throw error;
     }
+  }
+
+  // Add paywall check for relationship progression
+  checkRelationshipPaywall(characterId: string, currentLevel: number): { isLocked: boolean; requiredLevel: number } {
+    const PAYWALL_THRESHOLD = 10; // Relationship level where paywall kicks in
+    
+    if (currentLevel >= PAYWALL_THRESHOLD) {
+      return {
+        isLocked: true,
+        requiredLevel: PAYWALL_THRESHOLD
+      };
+    }
+    
+    return {
+      isLocked: false,
+      requiredLevel: 0
+    };
+  }
+
+  // Check if user has premium access (placeholder for future payment integration)
+  hasPremiumAccess(): boolean {
+    // This will be replaced with actual payment verification
+    // For now, return false to show paywall
+    return false;
   }
 }

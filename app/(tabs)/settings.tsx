@@ -35,8 +35,23 @@ export default function SettingsScreen() {
             try {
               const storyService = StoryService.getInstance();
               await storyService.resetGame();
-              Alert.alert('Game Reset', 'Your progress has been reset successfully.');
+              Alert.alert(
+                'Game Reset', 
+                'Your progress has been reset successfully. Please restart the app to begin a new story.',
+                [
+                  { 
+                    text: 'OK', 
+                    onPress: () => {
+                      // Force app refresh by reloading the page (web) or showing restart message
+                      if (Platform.OS === 'web') {
+                        window.location.reload();
+                      }
+                    }
+                  }
+                ]
+              );
             } catch (error) {
+              console.error('Reset game error:', error);
               Alert.alert('Error', 'Failed to reset game. Please try again.');
             }
           },

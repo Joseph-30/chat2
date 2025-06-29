@@ -16,6 +16,7 @@ export interface Choice {
   relationshipEffect?: { [characterId: string]: number };
   unlockCharacters?: string[];
   triggerEvent?: string;
+  isPaywallLocked?: boolean;
 }
 
 export interface Character {

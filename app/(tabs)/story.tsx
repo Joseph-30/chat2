@@ -136,6 +136,95 @@ export default function StoryScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Relationships</Text>
             {unlockedCharacters.map((character) => (
               <View key={character.id} style={[styles.relationshipItem, { borderBottomColor: colors.border }]}>
+                {(() => {
+                  const storyService = StoryService.getInstance();
+                  const relationshipLevel = gameState.relationshipScores[character.id] || 0;
+                  const paywallCheck = storyService.checkRelationshipPaywall(character.id, relationshipLevel);
+                  const isLocked = paywallCheck.isLocked && !storyService.hasPremiumAccess();
+                  
+                  return (
+                    <>
+                      <View style={styles.relationshipHeader}>
+                        <Text style={[styles.characterName, { color: colors.text }]}>{character.name}</Text>
+                        <View style={styles.badgeContainer}>
+                          {isLocked && (
+                            <View style={[styles.premiumBadge, { backgroundColor: colors.accent }]}>
+                              <Lock size={10} color="#fff" />
+                              <Text style={styles.premiumText}>Premium</Text>
+                            </View>
+                          )}
+                          <View style={[
+                            styles.relationshipBadge,
+                            { backgroundColor: getRelationshipColor(character.id) }
+                          ]}>
+                            <Text style={styles.relationshipText}>
+                              {getRelationshipStatus(character.id)}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Text style={[styles.characterDescription, { color: colors.textSecondary }]}>
+                        {character.description}
+                        {isLocked && (
+                          <Text style={[styles.premiumNote, { color: colors.accent }]}>
+                            {' '}• Premium required for deeper relationship
+                          </Text>
+                        )}
+                      </Text>
+                      <View style={[styles.relationshipBar, { backgroundColor: colors.border }]}>
+                        <View 
+                          style={[
+                            styles.relationshipFill,
+                            { 
+                              width: `${Math.max(0, Math.min(100, ((gameState.relationshipScores[character.id] || 0) + 20) * 2.5))}%`,
+                              backgroundColor: getRelationshipColor(character.id)
+                            }
+                          ]} 
+                        />
+                        {isLocked && (
+                          <View style={[styles.relationshipOverlay, { backgroundColor: colors.accent + '40' }]}>
+                            <Lock size={12} color={colors.accent} />
+                          </View>
+                        )}
+                      </View>
+                    </>
+                  );
+                })()}
+              </View>
+            ))}
+          </View>
+
+          {/* Premium Features Section */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Premium Features</Text>
+            <View style={[styles.premiumContainer, { backgroundColor: colors.background, borderColor: colors.accent }]}>
+              <Text style={[styles.premiumTitle, { color: colors.accent }]}>Unlock the Full Story</Text>
+              <Text style={[styles.premiumDescription, { color: colors.textSecondary }]}>
+                Get access to deeper relationships, exclusive romantic content, and multiple story endings.
+              </Text>
+              <View style={styles.premiumFeatures}>
+                <Text style={[styles.premiumFeature, { color: colors.textSecondary }]}>• Unlimited relationship progression</Text>
+                <Text style={[styles.premiumFeature, { color: colors.textSecondary }]}>• Exclusive romantic storylines</Text>
+                <Text style={[styles.premiumFeature, { color: colors.textSecondary }]}>• Multiple story endings</Text>
+                <Text style={[styles.premiumFeature, { color: colors.textSecondary }]}>• Priority AI responses</Text>
+              </View>
+              <Pressable 
+                style={[styles.premiumButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Coming Soon',
+                    'Premium features will be available soon! We\'re working on integrating secure payment processing.',
+                    [{ text: 'OK' }]
+                  );
+                }}
+              >
+                <Text style={styles.premiumButtonText}>Upgrade to Premium</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Story Synopsis */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
                 <View style={styles.relationshipHeader}>
                   <Text style={[styles.characterName, { color: colors.text }]}>{character.name}</Text>
                   <View style={[
@@ -166,46 +255,6 @@ export default function StoryScreen() {
           {/* Story Synopsis */}
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Story Synopsis</Text>
-            <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
-              You've discovered that your alternate timeline self has mysteriously disappeared from this reality. 
-              As you investigate the supernatural phenomena affecting your town, you're building relationships 
-              with various characters who may hold the key to understanding what happened.
-            </Text>
-            <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
-              Each conversation shapes your relationships and influences how the story unfolds. 
-              Your choices will determine which of the five possible endings you'll experience.
-            </Text>
-          </View>
-
-          {/* Story Atmosphere */}
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Atmosphere</Text>
-            <View style={styles.atmosphereContainer}>
-              <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
-                <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Mystery Level</Text>
-                <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
-                  <View style={[styles.atmosphereFill, { width: '75%', backgroundColor: colors.primary }]} />
-                </View>
-              </View>
-              <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
-                <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Supernatural Activity</Text>
-                <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
-                  <View style={[styles.atmosphereFill, { width: '60%', backgroundColor: colors.accent }]} />
-                </View>
-              </View>
-              <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
-                <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Romance Tension</Text>
-                <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
-                  <View style={[styles.atmosphereFill, { width: '45%', backgroundColor: colors.success }]} />
-                </View>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      )}
-    </SafeAreaView>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -269,6 +318,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 4,
+  },
+  premiumText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
+  },
   characterName: {
     fontSize: 16,
     fontWeight: '600',
@@ -290,14 +358,67 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontFamily: 'Inter-Regular',
   },
+  premiumNote: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    fontFamily: 'Inter-Regular',
+  },
   relationshipBar: {
     height: 4,
     borderRadius: 2,
     overflow: 'hidden',
+    position: 'relative',
   },
   relationshipFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  relationshipOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    height: '100%',
+    width: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  premiumContainer: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  premiumTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    fontFamily: 'Inter-Bold',
+  },
+  premiumDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  premiumFeatures: {
+    marginBottom: 16,
+  },
+  premiumFeature: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 4,
+    fontFamily: 'Inter-Regular',
+  },
+  premiumButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  premiumButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
   },
   synopsis: {
     fontSize: 14,
