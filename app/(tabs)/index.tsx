@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ContactListItem } from '../../components/ContactListItem';
+import { PlayerNameModal } from '../../components/PlayerNameModal';
 import { StoryService } from '../../services/storyService';
 import { GameState, Character, ConversationState } from '../../types/story';
 import { useTheme } from '../../hooks/useTheme';
@@ -11,6 +12,7 @@ export default function ContactsScreen() {
   const { colors } = useTheme();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showNameModal, setShowNameModal] = useState(false);
 
   useEffect(() => {
     initializeGame();
@@ -25,13 +27,31 @@ export default function ContactsScreen() {
       
       if (!state) {
         // Create new game
-        state = await storyService.initializeGame('Player');
+        setShowNameModal(true);
+        setIsLoading(false);
+        return;
       }
       
       setGameState(state);
     } catch (error) {
       console.error('Failed to initialize game:', error);
       Alert.alert('Error', 'Failed to load game. Please restart the app.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePlayerNameSubmit = async (playerName: string) => {
+    setShowNameModal(false);
+    setIsLoading(true);
+    
+    try {
+      const storyService = StoryService.getInstance();
+      const state = await storyService.initializeGame(playerName);
+      setGameState(state);
+    } catch (error) {
+      console.error('Failed to initialize game with player name:', error);
+      Alert.alert('Error', 'Failed to start game. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +123,11 @@ export default function ContactsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <PlayerNameModal
+        visible={showNameModal}
+        onSubmit={handlePlayerNameSubmit}
+      />
+      
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>Contacts</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Chapter {gameState.currentChapter}</Text>
