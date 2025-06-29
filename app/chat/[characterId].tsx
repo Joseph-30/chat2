@@ -136,7 +136,11 @@ export default function ChatScreen() {
   };
 
   const handleBackPress = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
   };
 
   const scrollToBottom = () => {
