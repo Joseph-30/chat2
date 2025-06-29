@@ -27,6 +27,12 @@ export class GeminiService {
 
   async generateStoryContent(prompt: string, context: any): Promise<string> {
     try {
+      // Check if API key is available
+      if (!GEMINI_API_KEY) {
+        console.warn('Gemini API key not available, using fallback content');
+        return this.getFallbackContent(context);
+      }
+
       const fullPrompt = `
         You are writing for an interactive horror/romance story game set in a near-future town with supernatural phenomena.
         The player is discovering their alternate timeline self is missing.
@@ -91,12 +97,33 @@ export class GeminiService {
       
     } catch (error) {
       console.error('Gemini API error:', error);
-      return 'Connection lost... try again later.';
+      return this.getFallbackContent(context);
     }
+  }
+
+  private getFallbackContent(context: any): string {
+    const character = context.character;
+    const playerName = context.playerName || 'Player';
+    
+    if (character?.id === 'alex') {
+      return `Hey ${playerName}! Something strange is happening in town. I think you need to see this...`;
+    } else if (character?.id === 'maya') {
+      return `The temporal readings are off the charts. We need to talk about what's happening.`;
+    } else if (character?.id === 'unknown') {
+      return `You don't know me, but I know about your missing alternate self...`;
+    }
+    
+    return `Something mysterious is happening. We need to investigate this together.`;
   }
 
   async generateChoices(context: any, characterId: string): Promise<any[]> {
     try {
+      // Check if API key is available
+      if (!GEMINI_API_KEY) {
+        console.warn('Gemini API key not available, using fallback choices');
+        return this.getFallbackChoices(context, characterId);
+      }
+
       const prompt = `
         Generate 3-4 smart, contextual chat response choices for this interactive horror/romance story:
         
@@ -205,8 +232,40 @@ export class GeminiService {
       }
     } catch (error) {
       console.error('Choice generation error:', error);
+      return this.getFallbackChoices(context, characterId);
+    }
+  }
+
+  private getFallbackChoices(context: any, characterId: string): any[] {
+    const storyStage = context.storyProgression || 'developing';
+    
+    if (storyStage === 'beginning') {
       return [
-        { text: "...", consequence: "neutral response", relationshipEffect: { [characterId]: 0 } }
+        { text: "Tell me more about this", consequence: "shows interest in character's story", relationshipEffect: { [characterId]: 1 } },
+        { text: "That sounds suspicious...", consequence: "character becomes more defensive", relationshipEffect: { [characterId]: -1 } },
+        { text: "I'm here to help", consequence: "builds trust with character", relationshipEffect: { [characterId]: 2 } },
+        { text: "Why should I trust you?", consequence: "challenges character's motives", relationshipEffect: { [characterId]: 0 } }
+      ];
+    } else if (storyStage === 'developing') {
+      return [
+        { text: "What aren't you telling me?", consequence: "pushes for deeper truth", relationshipEffect: { [characterId]: 0 } },
+        { text: "I believe you", consequence: "strengthens bond", relationshipEffect: { [characterId]: 2 } },
+        { text: "This is getting dangerous", consequence: "shows concern", relationshipEffect: { [characterId]: 1 } },
+        { text: "Let's investigate together", consequence: "commits to shared adventure", relationshipEffect: { [characterId]: 2 } }
+      ];
+    } else if (storyStage === 'climax') {
+      return [
+        { text: "We need to stop this now!", consequence: "takes decisive action", relationshipEffect: { [characterId]: 1 } },
+        { text: "I won't let anything happen to you", consequence: "protective declaration", relationshipEffect: { [characterId]: 3 } },
+        { text: "Maybe we should run...", consequence: "suggests retreat", relationshipEffect: { [characterId]: -1 } },
+        { text: "Trust me, I have a plan", consequence: "leads with confidence", relationshipEffect: { [characterId]: 2 } }
+      ];
+    } else {
+      return [
+        { text: "What happens now?", consequence: "seeks closure", relationshipEffect: { [characterId]: 0 } },
+        { text: "I'm glad we're safe", consequence: "expresses relief", relationshipEffect: { [characterId]: 1 } },
+        { text: "This isn't over, is it?", consequence: "hints at continuation", relationshipEffect: { [characterId]: 0 } },
+        { text: "Thank you for everything", consequence: "shows gratitude", relationshipEffect: { [characterId]: 2 } }
       ];
     }
   }

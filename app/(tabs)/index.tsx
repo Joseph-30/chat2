@@ -35,7 +35,9 @@ export default function ContactsScreen() {
       setGameState(state);
     } catch (error) {
       console.error('Failed to initialize game:', error);
-      Alert.alert('Error', 'Failed to load game. Please restart the app.');
+      // If loading fails, show name modal to start new game
+      console.log('Starting new game due to load error');
+      setShowNameModal(true);
     } finally {
       setIsLoading(false);
     }

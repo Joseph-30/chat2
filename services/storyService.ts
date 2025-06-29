@@ -1,8 +1,67 @@
 import { GameState, Character, StoryScene, ConversationState, Message, Choice } from '../types/story';
 import { GeminiService } from './geminiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const STORAGE_KEY = 'STORY_GAME_STATE';
+
+// Web-compatible storage fallback
+const webStorage = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+  
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  },
+  
+  async removeItem(key: string): Promise<void> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  },
+  
+  async getAllKeys(): Promise<string[]> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return Object.keys(window.localStorage);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  },
+  
+  async multiRemove(keys: string[]): Promise<void> {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        keys.forEach(key => window.localStorage.removeItem(key));
+      }
+    } catch {
+      // Silently fail if storage is not available
+    }
+  }
+};
+
+// Use appropriate storage based on platform
+const storage = Platform.OS === 'web' ? webStorage : AsyncStorage;
 
 export class StoryService {
   private static instance: StoryService;
@@ -76,7 +135,7 @@ export class StoryService {
 
   async loadGame(): Promise<GameState | null> {
     try {
-      const savedData = await AsyncStorage.getItem(STORAGE_KEY);
+      const savedData = await storage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
         
@@ -103,6 +162,7 @@ export class StoryService {
       }
     } catch (error) {
       console.error('Failed to load game:', error);
+      // Don't throw error, just return null to allow new game creation
     }
     return null;
   }
@@ -131,9 +191,10 @@ export class StoryService {
         )
       };
       
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(gameStateToSave));
+      await storage.setItem(STORAGE_KEY, JSON.stringify(gameStateToSave));
     } catch (error) {
       console.error('Failed to save game:', error);
+      // Don't throw error, just log it
     }
   }
 
@@ -154,10 +215,20 @@ export class StoryService {
         relationshipLevel: character.relationshipLevel
       };
 
-      const openingMessage = await this.geminiService.generateStoryContent(
-        `Generate an opening message from ${character.name} to start the story. This is their first contact with the player.`,
-        context
-      );
+      let openingMessage: string;
+      
+      try {
+        openingMessage = await this.geminiService.generateStoryContent(
+          `Generate an opening message from ${character.name} to start the story. This is their first contact with the player.`,
+          context
+        );
+      } catch (error) {
+        console.error('Failed to generate opening message:', error);
+        // Use fallback message
+        openingMessage = character.id === 'alex' 
+          ? `Hey ${this.gameState.playerName}! Something strange is happening in town...`
+          : `Hello... I need to tell you something important.`;
+      }
 
       // Validate the opening message and create fallback if needed
       let messageText = openingMessage;
@@ -187,13 +258,32 @@ export class StoryService {
       };
 
       // Generate initial choices
-      const choices = await this.geminiService.generateChoices(context, characterId);
-      this.gameState.conversations[characterId].availableChoices = choices.map((choice, index) => ({
-        id: `choice_${Date.now()}_${index}`,
-        text: choice.text,
-        consequence: choice.consequence,
-        relationshipEffect: choice.relationshipEffect || { [characterId]: 0 }
-      }));
+      try {
+        const choices = await this.geminiService.generateChoices(context, characterId);
+        this.gameState.conversations[characterId].availableChoices = choices.map((choice, index) => ({
+          id: `choice_${Date.now()}_${index}`,
+          text: choice.text,
+          consequence: choice.consequence,
+          relationshipEffect: choice.relationshipEffect || { [characterId]: 0 }
+        }));
+      } catch (error) {
+        console.error('Failed to generate initial choices:', error);
+        // Use fallback choices
+        this.gameState.conversations[characterId].availableChoices = [
+          {
+            id: `choice_${Date.now()}_0`,
+            text: "Tell me more",
+            consequence: "shows interest",
+            relationshipEffect: { [characterId]: 1 }
+          },
+          {
+            id: `choice_${Date.now()}_1`,
+            text: "I'm listening",
+            consequence: "neutral response",
+            relationshipEffect: { [characterId]: 0 }
+          }
+        ];
+      }
     }
 
     await this.saveGame();
@@ -270,14 +360,28 @@ export class StoryService {
       gameFlags: this.gameState.globalFlags
     };
 
-    // Generate AI response
-    const aiResponse = await this.geminiService.generateStoryContent(
-      `Continue the interactive horror/romance story. ${character.name} is responding to the player's choice. 
-      Consequence: ${choiceConsequence}. 
-      Make the response engaging and advance the story. Reference previous conversation context.
-      Keep it under 120 characters for mobile chat.`,
-      context
-    );
+    let aiResponse: string;
+    
+    try {
+      // Generate AI response
+      aiResponse = await this.geminiService.generateStoryContent(
+        `Continue the interactive horror/romance story. ${character.name} is responding to the player's choice. 
+        Consequence: ${choiceConsequence}. 
+        Make the response engaging and advance the story. Reference previous conversation context.
+        Keep it under 120 characters for mobile chat.`,
+        context
+      );
+    } catch (error) {
+      console.error('Failed to generate AI response:', error);
+      // Use contextual fallback based on character
+      if (character.id === 'alex') {
+        aiResponse = "That's... not what I expected. Let me think about this.";
+      } else if (character.id === 'maya') {
+        aiResponse = "Interesting choice. The data suggests this could work.";
+      } else {
+        aiResponse = "Your choice has consequences... we'll see what happens.";
+      }
+    }
 
     // Validate AI response and provide fallback
     let responseText = aiResponse;
@@ -305,19 +409,38 @@ export class StoryService {
     conversation.messages.push(aiMessage);
 
     // Generate new intelligent choices for next interaction
-    const newChoices = await this.geminiService.generateChoices({
-      ...context,
-      lastAIResponse: aiResponse,
-      storyProgression: this.calculateStoryProgression(characterId),
-      relationshipTier: this.getRelationshipTier(character.relationshipLevel)
-    }, characterId);
+    try {
+      const newChoices = await this.geminiService.generateChoices({
+        ...context,
+        lastAIResponse: aiResponse,
+        storyProgression: this.calculateStoryProgression(characterId),
+        relationshipTier: this.getRelationshipTier(character.relationshipLevel)
+      }, characterId);
 
-    conversation.availableChoices = newChoices.map((choice, index) => ({
-      id: `choice_${Date.now()}_${index}`,
-      text: choice.text,
-      consequence: choice.consequence,
-      relationshipEffect: choice.relationshipEffect || { [characterId]: 0 }
-    }));
+      conversation.availableChoices = newChoices.map((choice, index) => ({
+        id: `choice_${Date.now()}_${index}`,
+        text: choice.text,
+        consequence: choice.consequence,
+        relationshipEffect: choice.relationshipEffect || { [characterId]: 0 }
+      }));
+    } catch (error) {
+      console.error('Failed to generate new choices:', error);
+      // Use fallback choices
+      conversation.availableChoices = [
+        {
+          id: `choice_${Date.now()}_0`,
+          text: "Continue...",
+          consequence: "neutral response",
+          relationshipEffect: { [characterId]: 0 }
+        },
+        {
+          id: `choice_${Date.now()}_1`,
+          text: "Tell me more",
+          consequence: "shows interest",
+          relationshipEffect: { [characterId]: 1 }
+        }
+      ];
+    }
 
     conversation.isWaitingForResponse = true;
   }
@@ -366,18 +489,18 @@ export class StoryService {
 
   async resetGame(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await storage.removeItem(STORAGE_KEY);
       this.gameState = null;
       
       // Force a complete reset by clearing any cached data
-      const keys = await AsyncStorage.getAllKeys();
+      const keys = await storage.getAllKeys();
       const gameKeys = keys.filter(key => key.startsWith('STORY_') || key === STORAGE_KEY);
       if (gameKeys.length > 0) {
-        await AsyncStorage.multiRemove(gameKeys);
+        await storage.multiRemove(gameKeys);
       }
     } catch (error) {
       console.error('Failed to reset game:', error);
-      throw error;
+      // Don't throw error, just log it
     }
   }
 
@@ -387,5 +510,4 @@ export class StoryService {
     this.gameState.playerName = newName;
     await this.saveGame();
   }
-
 }
