@@ -226,6 +226,94 @@ export default function StoryScreen() {
           {/* Story Synopsis */}
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Story Synopsis</Text>
+            <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
+              You've discovered that your alternate timeline self has mysteriously vanished from this reality. 
+              As you investigate their disappearance, you uncover a web of supernatural phenomena plaguing the town. 
+              Strange temporal anomalies, unexplained disappearances, and cryptic messages from unknown contacts 
+              suggest something far more sinister is at work.
+            </Text>
+            <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
+              Your choices determine not only the fate of the missing person, but also the relationships you build 
+              with those who might hold the key to solving this mystery. Trust carefully - in a world where reality 
+              itself seems unstable, allies and enemies may not be what they appear.
+            </Text>
+          </View>
+
+          {/* Story Progression */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Story Progression</Text>
+            <View style={styles.progressionContainer}>
+              <View style={[styles.progressionItem, { backgroundColor: colors.background }]}>
+                <View style={[styles.progressionHeader, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.progressionTitle, { color: colors.text }]}>Chapter {gameState.currentChapter}</Text>
+                  <Text style={[styles.progressionStatus, { color: colors.primary }]}>In Progress</Text>
+                </View>
+                <Text style={[styles.progressionDescription, { color: colors.textSecondary }]}>
+                  {gameState.currentChapter === 1 && "The Investigation Begins - You've started uncovering the mystery of your alternate self's disappearance."}
+                  {gameState.currentChapter === 2 && "Deeper Mysteries - The supernatural elements become more apparent as you dig deeper."}
+                  {gameState.currentChapter === 3 && "Dangerous Revelations - The truth behind the disappearances starts to emerge."}
+                  {gameState.currentChapter === 4 && "The Final Confrontation - All mysteries converge as you face the ultimate truth."}
+                  {gameState.currentChapter >= 5 && "Resolution - The consequences of your choices determine the ending."}
+                </Text>
+              </View>
+              
+              {/* Atmosphere Meters */}
+              <View style={styles.atmosphereContainer}>
+                <Text style={[styles.atmosphereTitle, { color: colors.text }]}>Story Atmosphere</Text>
+                
+                <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.atmosphereLabel, { color: colors.text }]}>Mystery Level</Text>
+                  <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                    <View style={[
+                      styles.atmosphereFill,
+                      { 
+                        width: `${Math.min(100, (gameState.completedScenes.length * 15) + 30)}%`,
+                        backgroundColor: '#9C27B0'
+                      }
+                    ]} />
+                  </View>
+                </View>
+
+                <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.atmosphereLabel, { color: colors.text }]}>Supernatural Activity</Text>
+                  <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                    <View style={[
+                      styles.atmosphereFill,
+                      { 
+                        width: `${Math.min(100, (gameState.completedScenes.length * 12) + 20)}%`,
+                        backgroundColor: '#E91E63'
+                      }
+                    ]} />
+                  </View>
+                </View>
+
+                <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.atmosphereLabel, { color: colors.text }]}>Danger Level</Text>
+                  <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                    <View style={[
+                      styles.atmosphereFill,
+                      { 
+                        width: `${Math.min(100, (gameState.completedScenes.length * 10) + 15)}%`,
+                        backgroundColor: '#F44336'
+                      }
+                    ]} />
+                  </View>
+                </View>
+
+                <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.atmosphereLabel, { color: colors.text }]}>Romance Potential</Text>
+                  <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                    <View style={[
+                      styles.atmosphereFill,
+                      { 
+                        width: `${Math.min(100, Math.max(...Object.values(gameState.relationshipScores || {}), 0) * 4)}%`,
+                        backgroundColor: '#E91E63'
+                      }
+                    ]} />
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
         </ScrollView>
       )}
@@ -402,6 +490,42 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
     fontFamily: 'Inter-Regular',
+  },
+  progressionContainer: {
+    gap: 16,
+  },
+  progressionItem: {
+    padding: 16,
+    borderRadius: 12,
+  },
+  progressionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+  },
+  progressionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
+  },
+  progressionStatus: {
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: 'Inter-SemiBold',
+  },
+  progressionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Inter-Regular',
+  },
+  atmosphereTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    fontFamily: 'Inter-SemiBold',
   },
   atmosphereContainer: {
     gap: 12,
