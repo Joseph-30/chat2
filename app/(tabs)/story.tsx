@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
 import { GameState } from '../../types/story';
-import { Heart, Users, Clock, Trophy } from 'lucide-react-native';
+import { Heart, Users, Clock, Trophy, Lock } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import Animated, {
   useSharedValue,
@@ -225,36 +225,13 @@ export default function StoryScreen() {
 
           {/* Story Synopsis */}
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
-                <View style={styles.relationshipHeader}>
-                  <Text style={[styles.characterName, { color: colors.text }]}>{character.name}</Text>
-                  <View style={[
-                    styles.relationshipBadge,
-                    { backgroundColor: getRelationshipColor(character.id) }
-                  ]}>
-                    <Text style={styles.relationshipText}>
-                      {getRelationshipStatus(character.id)}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.characterDescription, { color: colors.textSecondary }]}>{character.description}</Text>
-                <View style={[styles.relationshipBar, { backgroundColor: colors.border }]}>
-                  <View 
-                    style={[
-                      styles.relationshipFill,
-                      { 
-                        width: `${Math.max(0, Math.min(100, ((gameState.relationshipScores[character.id] || 0) + 20) * 2.5))}%`,
-                        backgroundColor: getRelationshipColor(character.id)
-                      }
-                    ]} 
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {/* Story Synopsis */}
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Story Synopsis</Text>
+          </View>
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
