@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
 import { Trash2, Download, Moon, Sun, Volume2, VolumeX } from 'lucide-react-native';
+import { Trash2, Download, Moon, Sun, Volume2, VolumeX, LogOut } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 // Platform-specific imports
@@ -124,6 +125,37 @@ export default function SettingsScreen() {
     setIsSoundEnabled(!isSoundEnabled);
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out? This will clear your current session but keep your saved progress.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear any session data but keep game progress
+              // This is where you'd clear authentication tokens, etc.
+              Alert.alert('Logged Out', 'You have been successfully logged out.');
+              
+              // Navigate back to login or restart app
+              if (Platform.OS === 'web') {
+                window.location.reload();
+              }
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView}>
@@ -186,6 +218,18 @@ export default function SettingsScreen() {
             <View style={styles.settingLeft}>
               <Trash2 size={20} color={colors.error} />
               <Text style={[styles.settingText, { color: colors.error }]}>Reset Game</Text>
+            </View>
+          </Pressable>
+        </View>
+
+        {/* Account Management */}
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+          
+          <Pressable style={[styles.settingItem, styles.dangerItem]} onPress={handleLogout}>
+            <View style={styles.settingLeft}>
+              <LogOut size={20} color={colors.error} />
+              <Text style={[styles.settingText, { color: colors.error }]}>Log Out</Text>
             </View>
           </Pressable>
         </View>
