@@ -42,6 +42,14 @@ export default function StoryScreen() {
     loadGameState();
   }, []);
 
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseAnim.value }],
+  }));
+
+  const rotateStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotateAnim.value}deg` }],
+  }));
+
   const loadGameState = async () => {
     const storyService = StoryService.getInstance();
     const state = storyService.getGameState();
@@ -86,127 +94,115 @@ export default function StoryScreen() {
     return '#F44336';
   };
 
-  if (!gameState) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading story progress...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const unlockedCharacters = Object.values(gameState.characters).filter(c => c.isUnlocked);
-  
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseAnim.value }],
-  }));
-
-  const rotateStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotateAnim.value}deg` }],
-  }));
+  const unlockedCharacters = gameState ? Object.values(gameState.characters).filter(c => c.isUnlocked) : [];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.scrollView}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Your Story</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Progress & Relationships</Text>
+      {!gameState ? (
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading story progress...</Text>
         </View>
-
-        {/* Progress Stats */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Progress</Text>
-          <View style={styles.statsContainer}>
-            <Animated.View style={[styles.statItem, pulseStyle]}>
-              <Clock size={20} color={colors.primary} />
-              <Text style={[styles.statValue, { color: colors.text }]}>{getPlayTime()}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Play Time</Text>
-            </Animated.View>
-            <Animated.View style={[styles.statItem, pulseStyle]}>
-              <Users size={20} color={colors.primary} />
-              <Text style={[styles.statValue, { color: colors.text }]}>{unlockedCharacters.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Contacts</Text>
-            </Animated.View>
-            <Animated.View style={[styles.statItem, rotateStyle]}>
-              <Trophy size={20} color={colors.accent} />
-              <Text style={[styles.statValue, { color: colors.text }]}>{gameState.completedScenes.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Scenes</Text>
-            </Animated.View>
+      ) : (
+        <ScrollView style={styles.scrollView}>
+          <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.text }]}>Your Story</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Progress & Relationships</Text>
           </View>
-        </View>
 
-        {/* Relationships */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Relationships</Text>
-          {unlockedCharacters.map((character) => (
-            <View key={character.id} style={[styles.relationshipItem, { borderBottomColor: colors.border }]}>
-              <View style={styles.relationshipHeader}>
-                <Text style={[styles.characterName, { color: colors.text }]}>{character.name}</Text>
-                <View style={[
-                  styles.relationshipBadge,
-                  { backgroundColor: getRelationshipColor(character.id) }
-                ]}>
-                  <Text style={styles.relationshipText}>
-                    {getRelationshipStatus(character.id)}
-                  </Text>
+          {/* Progress Stats */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Progress</Text>
+            <View style={styles.statsContainer}>
+              <Animated.View style={[styles.statItem, pulseStyle]}>
+                <Clock size={20} color={colors.primary} />
+                <Text style={[styles.statValue, { color: colors.text }]}>{getPlayTime()}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Play Time</Text>
+              </Animated.View>
+              <Animated.View style={[styles.statItem, pulseStyle]}>
+                <Users size={20} color={colors.primary} />
+                <Text style={[styles.statValue, { color: colors.text }]}>{unlockedCharacters.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Contacts</Text>
+              </Animated.View>
+              <Animated.View style={[styles.statItem, rotateStyle]}>
+                <Trophy size={20} color={colors.accent} />
+                <Text style={[styles.statValue, { color: colors.text }]}>{gameState.completedScenes.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Scenes</Text>
+              </Animated.View>
+            </View>
+          </View>
+
+          {/* Relationships */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Relationships</Text>
+            {unlockedCharacters.map((character) => (
+              <View key={character.id} style={[styles.relationshipItem, { borderBottomColor: colors.border }]}>
+                <View style={styles.relationshipHeader}>
+                  <Text style={[styles.characterName, { color: colors.text }]}>{character.name}</Text>
+                  <View style={[
+                    styles.relationshipBadge,
+                    { backgroundColor: getRelationshipColor(character.id) }
+                  ]}>
+                    <Text style={styles.relationshipText}>
+                      {getRelationshipStatus(character.id)}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.characterDescription, { color: colors.textSecondary }]}>{character.description}</Text>
+                <View style={[styles.relationshipBar, { backgroundColor: colors.border }]}>
+                  <View 
+                    style={[
+                      styles.relationshipFill,
+                      { 
+                        width: `${Math.max(0, Math.min(100, ((gameState.relationshipScores[character.id] || 0) + 20) * 2.5))}%`,
+                        backgroundColor: getRelationshipColor(character.id)
+                      }
+                    ]} 
+                  />
                 </View>
               </View>
-              <Text style={[styles.characterDescription, { color: colors.textSecondary }]}>{character.description}</Text>
-              <View style={[styles.relationshipBar, { backgroundColor: colors.border }]}>
-                <View 
-                  style={[
-                    styles.relationshipFill,
-                    { 
-                      width: `${Math.max(0, Math.min(100, ((gameState.relationshipScores[character.id] || 0) + 20) * 2.5))}%`,
-                      backgroundColor: getRelationshipColor(character.id)
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
 
-        {/* Story Synopsis */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Story Synopsis</Text>
-          <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
-            You've discovered that your alternate timeline self has mysteriously disappeared from this reality. 
-            As you investigate the supernatural phenomena affecting your town, you're building relationships 
-            with various characters who may hold the key to understanding what happened.
-          </Text>
-          <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
-            Each conversation shapes your relationships and influences how the story unfolds. 
-            Your choices will determine which of the five possible endings you'll experience.
-          </Text>
-        </View>
+          {/* Story Synopsis */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Story Synopsis</Text>
+            <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
+              You've discovered that your alternate timeline self has mysteriously disappeared from this reality. 
+              As you investigate the supernatural phenomena affecting your town, you're building relationships 
+              with various characters who may hold the key to understanding what happened.
+            </Text>
+            <Text style={[styles.synopsis, { color: colors.textSecondary }]}>
+              Each conversation shapes your relationships and influences how the story unfolds. 
+              Your choices will determine which of the five possible endings you'll experience.
+            </Text>
+          </View>
 
-        {/* Story Atmosphere */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Atmosphere</Text>
-          <View style={styles.atmosphereContainer}>
-            <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
-              <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Mystery Level</Text>
-              <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
-                <View style={[styles.atmosphereFill, { width: '75%', backgroundColor: colors.primary }]} />
+          {/* Story Atmosphere */}
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Atmosphere</Text>
+            <View style={styles.atmosphereContainer}>
+              <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Mystery Level</Text>
+                <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                  <View style={[styles.atmosphereFill, { width: '75%', backgroundColor: colors.primary }]} />
+                </View>
               </View>
-            </View>
-            <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
-              <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Supernatural Activity</Text>
-              <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
-                <View style={[styles.atmosphereFill, { width: '60%', backgroundColor: colors.accent }]} />
+              <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Supernatural Activity</Text>
+                <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                  <View style={[styles.atmosphereFill, { width: '60%', backgroundColor: colors.accent }]} />
+                </View>
               </View>
-            </View>
-            <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
-              <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Romance Tension</Text>
-              <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
-                <View style={[styles.atmosphereFill, { width: '45%', backgroundColor: colors.success }]} />
+              <View style={[styles.atmosphereItem, { backgroundColor: colors.background }]}>
+                <Text style={[styles.atmosphereLabel, { color: colors.textSecondary }]}>Romance Tension</Text>
+                <View style={[styles.atmosphereBar, { backgroundColor: colors.border }]}>
+                  <View style={[styles.atmosphereFill, { width: '45%', backgroundColor: colors.success }]} />
+                </View>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
