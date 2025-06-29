@@ -97,35 +97,6 @@ export class GeminiService {
 
   async generateChoices(context: any, characterId: string): Promise<any[]> {
     try {
-      // Check for paywall restrictions
-      const storyService = StoryService.getInstance();
-      const relationshipLevel = context.relationshipLevel || 0;
-      const paywallCheck = storyService.checkRelationshipPaywall(characterId, relationshipLevel);
-      
-      if (paywallCheck.isLocked && !storyService.hasPremiumAccess()) {
-        // Return limited choices for free users at high relationship levels
-        return [
-          { 
-            text: "Continue conversation", 
-            consequence: "basic interaction", 
-            relationshipEffect: { [characterId]: 0 },
-            isPaywallLocked: false
-          },
-          { 
-            text: "🔒 Unlock deeper connection", 
-            consequence: "premium content", 
-            relationshipEffect: { [characterId]: 2 },
-            isPaywallLocked: true
-          },
-          { 
-            text: "🔒 Express deeper feelings", 
-            consequence: "premium romantic option", 
-            relationshipEffect: { [characterId]: 3 },
-            isPaywallLocked: true
-          }
-        ];
-      }
-
       const prompt = `
         Generate 3-4 smart, contextual chat response choices for this interactive horror/romance story:
         
@@ -193,7 +164,6 @@ export class GeminiService {
             text: choice.text || "Continue...",
             consequence: choice.consequence || "neutral response",
             relationshipEffect: choice.relationshipEffect || { [characterId]: 0 },
-            isPaywallLocked: false
           }));
         }
       } catch (parseError) {
@@ -206,37 +176,37 @@ export class GeminiService {
       
       if (storyStage === 'beginning') {
         return [
-          { text: "Tell me more about this", consequence: "shows interest in character's story", relationshipEffect: { [characterId]: 1 }, isPaywallLocked: false },
-          { text: "That sounds suspicious...", consequence: "character becomes more defensive", relationshipEffect: { [characterId]: -1 }, isPaywallLocked: false },
-          { text: "I'm here to help", consequence: "builds trust with character", relationshipEffect: { [characterId]: 2 }, isPaywallLocked: false },
-          { text: "Why should I trust you?", consequence: "challenges character's motives", relationshipEffect: { [characterId]: 0 }, isPaywallLocked: false }
+          { text: "Tell me more about this", consequence: "shows interest in character's story", relationshipEffect: { [characterId]: 1 } },
+          { text: "That sounds suspicious...", consequence: "character becomes more defensive", relationshipEffect: { [characterId]: -1 } },
+          { text: "I'm here to help", consequence: "builds trust with character", relationshipEffect: { [characterId]: 2 } },
+          { text: "Why should I trust you?", consequence: "challenges character's motives", relationshipEffect: { [characterId]: 0 } }
         ];
       } else if (storyStage === 'developing') {
         return [
-          { text: "What aren't you telling me?", consequence: "pushes for deeper truth", relationshipEffect: { [characterId]: 0 }, isPaywallLocked: false },
-          { text: "I believe you", consequence: "strengthens bond", relationshipEffect: { [characterId]: 2 }, isPaywallLocked: false },
-          { text: "This is getting dangerous", consequence: "shows concern", relationshipEffect: { [characterId]: 1 }, isPaywallLocked: false },
-          { text: "Let's investigate together", consequence: "commits to shared adventure", relationshipEffect: { [characterId]: 2 }, isPaywallLocked: false }
+          { text: "What aren't you telling me?", consequence: "pushes for deeper truth", relationshipEffect: { [characterId]: 0 } },
+          { text: "I believe you", consequence: "strengthens bond", relationshipEffect: { [characterId]: 2 } },
+          { text: "This is getting dangerous", consequence: "shows concern", relationshipEffect: { [characterId]: 1 } },
+          { text: "Let's investigate together", consequence: "commits to shared adventure", relationshipEffect: { [characterId]: 2 } }
         ];
       } else if (storyStage === 'climax') {
         return [
-          { text: "We need to stop this now!", consequence: "takes decisive action", relationshipEffect: { [characterId]: 1 }, isPaywallLocked: false },
-          { text: "I won't let anything happen to you", consequence: "protective declaration", relationshipEffect: { [characterId]: 3 }, isPaywallLocked: false },
-          { text: "Maybe we should run...", consequence: "suggests retreat", relationshipEffect: { [characterId]: -1 }, isPaywallLocked: false },
-          { text: "Trust me, I have a plan", consequence: "leads with confidence", relationshipEffect: { [characterId]: 2 }, isPaywallLocked: false }
+          { text: "We need to stop this now!", consequence: "takes decisive action", relationshipEffect: { [characterId]: 1 } },
+          { text: "I won't let anything happen to you", consequence: "protective declaration", relationshipEffect: { [characterId]: 3 } },
+          { text: "Maybe we should run...", consequence: "suggests retreat", relationshipEffect: { [characterId]: -1 } },
+          { text: "Trust me, I have a plan", consequence: "leads with confidence", relationshipEffect: { [characterId]: 2 } }
         ];
       } else {
         return [
-          { text: "What happens now?", consequence: "seeks closure", relationshipEffect: { [characterId]: 0 }, isPaywallLocked: false },
-          { text: "I'm glad we're safe", consequence: "expresses relief", relationshipEffect: { [characterId]: 1 }, isPaywallLocked: false },
-          { text: "This isn't over, is it?", consequence: "hints at continuation", relationshipEffect: { [characterId]: 0 }, isPaywallLocked: false },
-          { text: "Thank you for everything", consequence: "shows gratitude", relationshipEffect: { [characterId]: 2 }, isPaywallLocked: false }
+          { text: "What happens now?", consequence: "seeks closure", relationshipEffect: { [characterId]: 0 } },
+          { text: "I'm glad we're safe", consequence: "expresses relief", relationshipEffect: { [characterId]: 1 } },
+          { text: "This isn't over, is it?", consequence: "hints at continuation", relationshipEffect: { [characterId]: 0 } },
+          { text: "Thank you for everything", consequence: "shows gratitude", relationshipEffect: { [characterId]: 2 } }
         ];
       }
     } catch (error) {
       console.error('Choice generation error:', error);
       return [
-        { text: "...", consequence: "neutral response", relationshipEffect: { [characterId]: 0 }, isPaywallLocked: false }
+        { text: "...", consequence: "neutral response", relationshipEffect: { [characterId]: 0 } }
       ];
     }
   }

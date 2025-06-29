@@ -7,7 +7,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { ThemeColors } from '../hooks/useTheme';
-import { Lock } from 'lucide-react-native';
 
 interface ChoiceButtonProps {
   choice: Choice;
@@ -32,9 +31,7 @@ export function ChoiceButton({ choice, onPress, index, colors }: ChoiceButtonPro
   }));
 
   const handlePressIn = () => {
-    if (!choice.isPaywallLocked) {
-      scale.value = withSpring(0.95);
-    }
+    scale.value = withSpring(0.95);
   };
 
   const handlePressOut = () => {
@@ -42,24 +39,7 @@ export function ChoiceButton({ choice, onPress, index, colors }: ChoiceButtonPro
   };
 
   const handlePress = () => {
-    if (choice.isPaywallLocked) {
-      Alert.alert(
-        'Premium Feature',
-        'This choice requires premium access. Unlock deeper relationships and exclusive story content with premium!',
-        [
-          { text: 'Maybe Later', style: 'cancel' },
-          { text: 'Learn More', onPress: () => {
-            Alert.alert(
-              'Premium Benefits',
-              '• Unlock deeper relationship levels\n• Access exclusive romantic content\n• Multiple story endings\n• Priority AI responses\n• No ads',
-              [{ text: 'OK' }]
-            );
-          }}
-        ]
-      );
-    } else {
-      onPress(choice.id);
-    }
+    onPress(choice.id);
   };
 
   return (
@@ -67,27 +47,15 @@ export function ChoiceButton({ choice, onPress, index, colors }: ChoiceButtonPro
       style={[
         styles.button, 
         animatedStyle, 
-        { 
-          backgroundColor: choice.isPaywallLocked ? colors.background : colors.card, 
-          borderColor: choice.isPaywallLocked ? colors.accent : colors.border,
-          opacity: choice.isPaywallLocked ? 0.8 : 1
-        }
+        { backgroundColor: colors.card, borderColor: colors.border }
       ]}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
-      <View style={styles.buttonContent}>
-        {choice.isPaywallLocked && (
-          <Lock size={16} color={colors.accent} style={styles.lockIcon} />
-        )}
-        <Text style={[
-          styles.buttonText, 
-          { color: choice.isPaywallLocked ? colors.accent : colors.text }
-        ]}>
-          {choice.text}
-        </Text>
-      </View>
+      <Text style={[styles.buttonText, { color: colors.text }]}>
+        {choice.text}
+      </Text>
     </AnimatedPressable>
   );
 }
@@ -100,14 +68,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginVertical: 4,
     marginHorizontal: 16,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lockIcon: {
-    marginRight: 8,
   },
   buttonText: {
     fontSize: 15,
