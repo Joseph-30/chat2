@@ -29,7 +29,7 @@ export class GeminiService {
     try {
       // Check if API key is available
       if (!GEMINI_API_KEY) {
-        console.warn('Gemini API key not available, using fallback content');
+        console.log('Gemini API key not available, using fallback content');
         return this.getFallbackContent(context);
       }
 
@@ -66,16 +66,16 @@ export class GeminiService {
       });
 
       if (!response.ok) {
-        console.error('Gemini API HTTP error:', response.status, response.statusText);
-        return 'Connection lost... try again later.';
+        console.log('Gemini API HTTP error:', response.status, response.statusText);
+        return this.getFallbackContent(context);
       }
 
       const data: GeminiResponse = await response.json();
       const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       
       if (!responseText) {
-        console.error('No response text from Gemini:', data);
-        return 'Something mysterious happened...';
+        console.log('No response text from Gemini, using fallback');
+        return this.getFallbackContent(context);
       }
       
       // Clean the response text
@@ -90,13 +90,13 @@ export class GeminiService {
       
       // Ensure it's not empty after cleaning
       if (!cleanText || cleanText.length < 5) {
-        return 'The signal fades... strange...';
+        return this.getFallbackContent(context);
       }
       
       return cleanText;
       
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.log('Gemini API error, using fallback:', error.message);
       return this.getFallbackContent(context);
     }
   }
@@ -120,7 +120,7 @@ export class GeminiService {
     try {
       // Check if API key is available
       if (!GEMINI_API_KEY) {
-        console.warn('Gemini API key not available, using fallback choices');
+        console.log('Gemini API key not available, using fallback choices');
         return this.getFallbackChoices(context, characterId);
       }
 
@@ -194,8 +194,7 @@ export class GeminiService {
           }));
         }
       } catch (parseError) {
-        console.error('Failed to parse choices JSON:', parseError);
-        console.error('Raw response:', choicesText);
+        console.log('Failed to parse choices JSON, using fallback');
       }
       
       // Enhanced fallback choices based on context
@@ -231,7 +230,7 @@ export class GeminiService {
         ];
       }
     } catch (error) {
-      console.error('Choice generation error:', error);
+      console.log('Choice generation error, using fallback:', error.message);
       return this.getFallbackChoices(context, characterId);
     }
   }

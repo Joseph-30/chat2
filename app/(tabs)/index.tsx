@@ -22,11 +22,16 @@ export default function ContactsScreen() {
     const storyService = StoryService.getInstance();
     
     try {
-      // Try to load existing game
-      let state = await storyService.loadGame();
+      // Try to load existing game with timeout
+      const loadPromise = storyService.loadGame();
+      const timeoutPromise = new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 5000); // 5 second timeout
+      });
+      
+      let state = await Promise.race([loadPromise, timeoutPromise]);
       
       if (!state) {
-        // Create new game
+        console.log('No existing game found or load timed out, showing name modal');
         setShowNameModal(true);
         setIsLoading(false);
         return;
@@ -35,8 +40,7 @@ export default function ContactsScreen() {
       setGameState(state);
     } catch (error) {
       console.error('Failed to initialize game:', error);
-      // If loading fails, show name modal to start new game
-      console.log('Starting new game due to load error');
+      console.log('Load failed, starting new game');
       setShowNameModal(true);
     } finally {
       setIsLoading(false);
@@ -105,7 +109,9 @@ export default function ContactsScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading your story...</Text>
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            {showNameModal ? 'Preparing your adventure...' : 'Loading your story...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -114,8 +120,14 @@ export default function ContactsScreen() {
   if (!gameState) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <PlayerNameModal
+          visible={showNameModal}
+          onSubmit={handlePlayerNameSubmit}
+        />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.error }]}>Failed to load game</Text>
+          <Text style={[styles.errorText, { color: colors.text }]}>
+            {showNameModal ? 'Starting new adventure...' : 'Welcome! Let\'s begin your story.'}
+          </Text>
         </View>
       </SafeAreaView>
     );

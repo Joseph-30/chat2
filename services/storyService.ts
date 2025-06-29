@@ -9,7 +9,7 @@ const STORAGE_KEY = 'STORY_GAME_STATE';
 const webStorage = {
   async getItem(key: string): Promise<string | null> {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
         return window.localStorage.getItem(key);
       }
       return null;
@@ -20,7 +20,7 @@ const webStorage = {
   
   async setItem(key: string, value: string): Promise<void> {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
         window.localStorage.setItem(key, value);
       }
     } catch {
@@ -30,7 +30,7 @@ const webStorage = {
   
   async removeItem(key: string): Promise<void> {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
         window.localStorage.removeItem(key);
       }
     } catch {
@@ -40,7 +40,7 @@ const webStorage = {
   
   async getAllKeys(): Promise<string[]> {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.key === 'function') {
         return Object.keys(window.localStorage);
       }
       return [];
@@ -51,7 +51,7 @@ const webStorage = {
   
   async multiRemove(keys: string[]): Promise<void> {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
         keys.forEach(key => window.localStorage.removeItem(key));
       }
     } catch {
