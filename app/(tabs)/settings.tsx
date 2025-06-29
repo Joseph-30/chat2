@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
-import { Trash2, Download, Moon, Sun, Volume2, VolumeX, LogOut } from 'lucide-react-native';
+import { Trash2, Download, Moon, Sun, Volume2, VolumeX, LogOut, User, Edit3, Check, X } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
+import { GameState } from '../../types/story';
 
 // Platform-specific imports
 let FileSystem: any = null;
@@ -18,6 +19,23 @@ export default function SettingsScreen() {
   const { colors, theme, toggleTheme, isDark } = useTheme();
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  React.useEffect(() => {
+    loadGameState();
+  }, []);
+
+  const loadGameState = async () => {
+    const storyService = StoryService.getInstance();
+    const state = storyService.getGameState();
+    if (state) {
+      setGameState(state);
+      setNewPlayerName(state.playerName);
+    }
+  };
 
   const handleResetGame = () => {
     Alert.alert(
@@ -124,6 +142,58 @@ export default function SettingsScreen() {
     setIsSoundEnabled(!isSoundEnabled);
   };
 
+  const handleEditName = () => {
+    if (gameState) {
+      setNewPlayerName(gameState.playerName);
+      setNameError('');
+      setShowNameModal(true);
+    }
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = newPlayerName.trim();
+    
+    if (!trimmedName) {
+      setNameError('Please enter your name');
+      return;
+    }
+    
+    if (trimmedName.length < 2) {
+      setNameError('Name must be at least 2 characters');
+      return;
+    }
+    
+    if (trimmedName.length > 20) {
+      setNameError('Name must be less than 20 characters');
+      return;
+    }
+
+    try {
+      const storyService = StoryService.getInstance();
+      await storyService.updatePlayerName(trimmedName);
+      
+      // Update local state
+      if (gameState) {
+        setGameState({ ...gameState, playerName: trimmedName });
+      }
+      
+      setShowNameModal(false);
+      setNameError('');
+      Alert.alert('Success', 'Your name has been updated successfully!');
+    } catch (error) {
+      console.error('Failed to update player name:', error);
+      Alert.alert('Error', 'Failed to update name. Please try again.');
+    }
+  };
+
+  const handleCancelNameEdit = () => {
+    setShowNameModal(false);
+    setNameError('');
+    if (gameState) {
+      setNewPlayerName(gameState.playerName);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Log Out',
@@ -157,6 +227,78 @@ export default function SettingsScreen() {
   };
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Name Edit Modal */}
+      <Modal
+        visible={showNameModal}
+        animationType="fade"
+        transparent={true}
+        statusBarTranslucent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Your Name</Text>
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                This name will be used throughout your story
+              </Text>
+            </View>
+
+            <View style={styles.modalInputSection}>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  { 
+                    backgroundColor: colors.background,
+                    borderColor: nameError ? colors.error : colors.border,
+                    color: colors.text
+                  }
+                ]}
+                value={newPlayerName}
+                onChangeText={(text) => {
+                  setNewPlayerName(text);
+                  if (nameError) setNameError('');
+                }}
+                placeholder="Enter your name..."
+                placeholderTextColor={colors.textSecondary}
+                maxLength={20}
+                autoFocus={true}
+                returnKeyType="done"
+                onSubmitEditing={handleSaveName}
+              />
+              {nameError ? (
+                <Text style={[styles.modalErrorText, { color: colors.error }]}>{nameError}</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.modalCancelButton, { backgroundColor: colors.background }]}
+                onPress={handleCancelNameEdit}
+              >
+                <X size={16} color={colors.textSecondary} />
+                <Text style={[styles.modalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              </Pressable>
+              
+              <Pressable
+                style={[
+                  styles.modalButton, 
+                  styles.modalSaveButton,
+                  { 
+                    backgroundColor: newPlayerName.trim() ? colors.primary : colors.border,
+                    opacity: newPlayerName.trim() ? 1 : 0.6
+                  }
+                ]}
+                onPress={handleSaveName}
+                disabled={!newPlayerName.trim()}
+              >
+                <Check size={16} color="#fff" />
+                <Text style={[styles.modalButtonText, { color: '#fff' }]}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView style={styles.scrollView}>
         <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
@@ -165,7 +307,22 @@ export default function SettingsScreen() {
 
         {/* Game Settings */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Game Settings</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile & Game Settings</Text>
+          
+          {gameState && (
+            <Pressable style={styles.settingItem} onPress={handleEditName}>
+              <View style={styles.settingLeft}>
+                <User size={20} color={colors.primary} />
+                <View style={styles.settingTextContainer}>
+                  <Text style={[styles.settingText, { color: colors.text }]}>Player Name</Text>
+                  <Text style={[styles.settingSubtext, { color: colors.textSecondary }]}>
+                    {gameState.playerName}
+                  </Text>
+                </View>
+              </View>
+              <Edit3 size={16} color={colors.textSecondary} />
+            </Pressable>
+          )}
           
           <Pressable style={styles.settingItem} onPress={toggleSound}>
             <View style={styles.settingLeft}>
@@ -313,10 +470,19 @@ const styles = StyleSheet.create({
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  settingTextContainer: {
+    marginLeft: 12,
+    flex: 1,
   },
   settingText: {
     fontSize: 16,
-    marginLeft: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  settingSubtext: {
+    fontSize: 14,
+    marginTop: 2,
     fontFamily: 'Inter-Regular',
   },
   settingValue: {
@@ -345,5 +511,85 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 8,
     fontFamily: 'Inter-Regular',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalInputSection: {
+    marginBottom: 24,
+  },
+  modalInput: {
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+  },
+  modalErrorText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    marginTop: 8,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  modalCancelButton: {
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  modalSaveButton: {
+    // No additional styles needed
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
   },
 });

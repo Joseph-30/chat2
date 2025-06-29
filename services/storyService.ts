@@ -381,6 +381,13 @@ export class StoryService {
     }
   }
 
+  async updatePlayerName(newName: string): Promise<void> {
+    if (!this.gameState) throw new Error('Game not initialized');
+    
+    this.gameState.playerName = newName;
+    await this.saveGame();
+  }
+
   // Add paywall check for relationship progression
   checkRelationshipPaywall(characterId: string, currentLevel: number): { isLocked: boolean; requiredLevel: number } {
     const PAYWALL_THRESHOLD = 10; // Relationship level where paywall kicks in
