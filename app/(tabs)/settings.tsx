@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
+import { Trash2, Download, Moon, Sun, Volume2, VolumeX } from 'lucide-react-native';
 import { Trash2, Download, Moon, Sun, Volume2, VolumeX, LogOut } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 
