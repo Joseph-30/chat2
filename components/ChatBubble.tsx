@@ -3,15 +3,17 @@ import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { Message } from '../types/story';
 import { TypingIndicator } from './TypingIndicator';
 import { Check, CheckCheck } from 'lucide-react-native';
+import { ThemeColors } from '../hooks/useTheme';
 
 interface ChatBubbleProps {
   message: Message;
   isPlayer: boolean;
   characterAvatar?: string;
   onImagePress?: (url: string) => void;
+  colors: ThemeColors;
 }
 
-export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress }: ChatBubbleProps) {
+export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress, colors }: ChatBubbleProps) {
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -22,7 +24,7 @@ export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress }:
         {characterAvatar && (
           <Image source={{ uri: characterAvatar }} style={styles.avatar} />
         )}
-        <View style={[styles.bubble, styles.receivedBubble]}>
+        <View style={[styles.bubble, styles.receivedBubble, { backgroundColor: colors.card }]}>
           <TypingIndicator />
         </View>
       </View>
@@ -40,7 +42,7 @@ export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress }:
       
       <View style={[
         styles.bubble,
-        isPlayer ? styles.sentBubble : styles.receivedBubble
+        isPlayer ? [styles.sentBubble, { backgroundColor: colors.primary }] : [styles.receivedBubble, { backgroundColor: colors.card }]
       ]}>
         {message.type === 'image' && message.imageUrl && (
           <Pressable onPress={() => onImagePress?.(message.imageUrl!)}>
@@ -51,7 +53,7 @@ export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress }:
         {message.text && (
           <Text style={[
             styles.messageText,
-            isPlayer ? styles.sentText : styles.receivedText
+            isPlayer ? styles.sentText : [styles.receivedText, { color: colors.text }]
           ]}>
             {message.text}
           </Text>
@@ -60,7 +62,7 @@ export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress }:
         <View style={styles.messageFooter}>
           <Text style={[
             styles.timestamp,
-            isPlayer ? styles.sentTimestamp : styles.receivedTimestamp
+            isPlayer ? styles.sentTimestamp : [styles.receivedTimestamp, { color: colors.textSecondary }]
           ]}>
             {formatTime(message.timestamp)}
           </Text>
@@ -68,9 +70,9 @@ export function ChatBubble({ message, isPlayer, characterAvatar, onImagePress }:
           {isPlayer && (
             <View style={styles.readStatus}>
               {message.isRead ? (
-                <CheckCheck size={14} color="#4A90E2" />
+                <CheckCheck size={14} color={colors.primary} />
               ) : (
-                <Check size={14} color="#888" />
+                <Check size={14} color={colors.textSecondary} />
               )}
             </View>
           )}
@@ -106,11 +108,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   sentBubble: {
-    backgroundColor: '#4A90E2',
     borderBottomRightRadius: 4,
   },
   receivedBubble: {
-    backgroundColor: '#E5E5EA',
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -121,7 +121,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   receivedText: {
-    color: '#000',
   },
   messageImage: {
     width: 200,
@@ -143,7 +142,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
   },
   receivedTimestamp: {
-    color: '#666',
   },
   readStatus: {
     marginLeft: 4,

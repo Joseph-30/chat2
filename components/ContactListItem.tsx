@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { Character } from '../types/story';
 import { Lock, Circle } from 'lucide-react-native';
+import { useTheme } from '../hooks/useTheme';
 
 interface ContactListItemProps {
   character: Character;
@@ -18,6 +19,8 @@ export function ContactListItem({
   lastMessage,
   lastMessageTime 
 }: ContactListItemProps) {
+  const { colors } = useTheme();
+
   const formatTime = (date: Date) => {
     // Convert string date to Date object if needed
     const dateObj = date instanceof Date ? date : new Date(date);
@@ -43,15 +46,15 @@ export function ContactListItem({
 
   if (!character.isUnlocked) {
     return (
-      <View style={[styles.container, styles.lockedContainer]}>
+      <View style={[styles.container, styles.lockedContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.avatarContainer}>
-          <View style={styles.lockedAvatar}>
-            <Lock size={20} color="#999" />
+          <View style={[styles.lockedAvatar, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Lock size={20} color={colors.textSecondary} />
           </View>
         </View>
         <View style={styles.contentContainer}>
-          <Text style={styles.lockedName}>Locked Contact</Text>
-          <Text style={styles.lockedMessage}>Complete more of the story to unlock</Text>
+          <Text style={[styles.lockedName, { color: colors.textSecondary }]}>Locked Contact</Text>
+          <Text style={[styles.lockedMessage, { color: colors.textSecondary }]}>Complete more of the story to unlock</Text>
         </View>
       </View>
     );
@@ -59,7 +62,7 @@ export function ContactListItem({
 
   return (
     <Pressable
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
       onPress={() => onPress(character.id)}
     >
       <View style={styles.avatarContainer}>
@@ -74,23 +77,25 @@ export function ContactListItem({
       <View style={styles.contentContainer}>
         <View style={styles.headerRow}>
           <Text style={[styles.name, hasUnreadMessages && styles.unreadName]}>
-            {character.name}
+            <Text style={[styles.name, hasUnreadMessages && styles.unreadName, { color: colors.text }]}>
+              {character.name}
+            </Text>
           </Text>
           {lastMessageTime && (
-            <Text style={styles.time}>
+            <Text style={[styles.time, { color: colors.textSecondary }]}>
               {formatTime(lastMessageTime)}
             </Text>
           )}
         </View>
         
-        <Text style={[styles.lastMessage, hasUnreadMessages && styles.unreadMessage]} numberOfLines={1}>
+        <Text style={[styles.lastMessage, hasUnreadMessages && styles.unreadMessage, { color: hasUnreadMessages ? colors.text : colors.textSecondary }]} numberOfLines={1}>
           {lastMessage || character.description}
         </Text>
       </View>
       
       {hasUnreadMessages && (
         <View style={styles.unreadBadge}>
-          <Circle size={8} color="#4A90E2" fill="#4A90E2" />
+          <Circle size={8} color={colors.primary} fill={colors.primary} />
         </View>
       )}
     </Pressable>
@@ -102,9 +107,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   lockedContainer: {
     opacity: 0.6,
@@ -122,11 +125,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
   },
   onlineIndicator: {
     position: 'absolute',
@@ -149,7 +150,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
   },
   unreadName: {
     fontWeight: '700',
@@ -157,23 +157,18 @@ const styles = StyleSheet.create({
   lockedName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999',
   },
   time: {
     fontSize: 12,
-    color: '#999',
   },
   lastMessage: {
     fontSize: 14,
-    color: '#666',
   },
   unreadMessage: {
     fontWeight: '600',
-    color: '#000',
   },
   lockedMessage: {
     fontSize: 14,
-    color: '#999',
     fontStyle: 'italic',
   },
   unreadBadge: {

@@ -6,16 +6,18 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { ThemeColors } from '../hooks/useTheme';
 
 interface ChoiceButtonProps {
   choice: Choice;
   onPress: (choiceId: string) => void;
   index: number;
+  colors: ThemeColors;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function ChoiceButton({ choice, onPress, index }: ChoiceButtonProps) {
+export function ChoiceButton({ choice, onPress, index, colors }: ChoiceButtonProps) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -42,21 +44,19 @@ export function ChoiceButton({ choice, onPress, index }: ChoiceButtonProps) {
 
   return (
     <AnimatedPressable
-      style={[styles.button, animatedStyle]}
+      style={[styles.button, animatedStyle, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
-      <Text style={styles.buttonText}>{choice.text}</Text>
+      <Text style={[styles.buttonText, { color: colors.text }]}>{choice.text}</Text>
     </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    borderColor: '#e9ecef',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -65,7 +65,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 15,
-    color: '#495057',
     textAlign: 'center',
     fontWeight: '500',
   },

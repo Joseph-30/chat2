@@ -8,8 +8,10 @@ import { ChoiceButton } from '../../components/ChoiceButton';
 import { EmotionOverlay } from '../../components/EmotionOverlay';
 import { StoryService } from '../../services/storyService';
 import { GameState, ConversationState, Message, Character } from '../../types/story';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function ChatScreen() {
+  const { colors } = useTheme();
   const { characterId } = useLocalSearchParams<{ characterId: string }>();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [conversation, setConversation] = useState<ConversationState | null>(null);
@@ -151,10 +153,12 @@ export default function ChatScreen() {
 
   if (!character || !conversation || isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>
-            {isLoading ? 'Loading conversation...' : 'Connecting...'}
+            <Text style={[styles.loadingText, { color: colors.text }]}>
+              {isLoading ? 'Loading conversation...' : 'Connecting...'}
+            </Text>
           </Text>
         </View>
       </SafeAreaView>
@@ -165,18 +169,18 @@ export default function ChatScreen() {
   const hasTypingMessage = conversation.messages.some(msg => msg.isTyping);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Pressable style={styles.backButton} onPress={handleBackPress}>
-          <ArrowLeft size={24} color="#4A90E2" />
+          <ArrowLeft size={24} color={colors.primary} />
         </Pressable>
         
         <View style={styles.headerInfo}>
           <Image source={{ uri: character.avatar }} style={styles.headerAvatar} />
           <View style={styles.headerText}>
-            <Text style={styles.headerName}>{character.name}</Text>
-            <Text style={styles.headerStatus}>
+            <Text style={[styles.headerName, { color: colors.text }]}>{character.name}</Text>
+            <Text style={[styles.headerStatus, { color: colors.textSecondary }]}>
               {character.isOnline ? 'Online' : 'Last seen recently'}
             </Text>
           </View>
@@ -184,10 +188,10 @@ export default function ChatScreen() {
 
         <View style={styles.headerActions}>
           <Pressable style={styles.actionButton}>
-            <Phone size={20} color="#4A90E2" />
+            <Phone size={20} color={colors.primary} />
           </Pressable>
           <Pressable style={styles.actionButton}>
-            <Video size={20} color="#4A90E2" />
+            <Video size={20} color={colors.primary} />
           </Pressable>
         </View>
       </View>
@@ -202,33 +206,36 @@ export default function ChatScreen() {
             message={item}
             isPlayer={item.senderId === 'player'}
             characterAvatar={character.avatar}
+            colors={colors}
           />
         )}
-        style={styles.messagesList}
+        style={[styles.messagesList, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.messagesContent}
         onContentSizeChange={scrollToBottom}
       />
 
       {/* Typing Indicator */}
       {hasTypingMessage && (
-        <View style={styles.typingContainer}>
+        <View style={[styles.typingContainer, { backgroundColor: colors.background }]}>
           <ChatBubble
             message={conversation.messages.find(m => m.isTyping)!}
             isPlayer={false}
             characterAvatar={character.avatar}
+            colors={colors}
           />
         </View>
       )}
 
       {/* Choice Buttons */}
       {conversation.isWaitingForResponse && conversation.availableChoices.length > 0 && !isChoiceLoading && (
-        <View style={styles.choicesContainer}>
+        <View style={[styles.choicesContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           {conversation.availableChoices.map((choice, index) => (
             <ChoiceButton
               key={choice.id}
               choice={choice}
               onPress={handleChoicePress}
               index={index}
+              colors={colors}
             />
           ))}
         </View>
@@ -236,8 +243,8 @@ export default function ChatScreen() {
 
       {/* Loading State for Choices */}
       {isChoiceLoading && (
-        <View style={styles.choicesContainer}>
-          <Text style={styles.loadingText}>Generating response...</Text>
+        <View style={[styles.choicesContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <Text style={[styles.loadingText, { color: colors.text }]}>Generating response...</Text>
         </View>
       )}
 
@@ -256,7 +263,6 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -264,8 +270,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
   },
   backButton: {
     padding: 4,
@@ -288,12 +292,10 @@ const styles = StyleSheet.create({
   headerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
     fontFamily: 'Inter-SemiBold',
   },
   headerStatus: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
     fontFamily: 'Inter-Regular',
   },
@@ -306,19 +308,15 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   messagesContent: {
     paddingVertical: 16,
   },
   typingContainer: {
-    backgroundColor: '#f8f9fa',
   },
   choicesContainer: {
-    backgroundColor: '#fff',
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
   loadingContainer: {
     flex: 1,
@@ -327,7 +325,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     fontFamily: 'Inter-Regular',
   },
 });

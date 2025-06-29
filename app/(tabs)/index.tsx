@@ -5,8 +5,10 @@ import { router } from 'expo-router';
 import { ContactListItem } from '../../components/ContactListItem';
 import { StoryService } from '../../services/storyService';
 import { GameState, Character, ConversationState } from '../../types/story';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function ContactsScreen() {
+  const { colors } = useTheme();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,9 +81,9 @@ export default function ContactsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your story...</Text>
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading your story...</Text>
         </View>
       </SafeAreaView>
     );
@@ -89,9 +91,9 @@ export default function ContactsScreen() {
 
   if (!gameState) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Failed to load game</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>Failed to load game</Text>
         </View>
       </SafeAreaView>
     );
@@ -100,10 +102,10 @@ export default function ContactsScreen() {
   const characters = Object.values(gameState.characters);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Contacts</Text>
-        <Text style={styles.subtitle}>Chapter {gameState.currentChapter}</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Contacts</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Chapter {gameState.currentChapter}</Text>
       </View>
       
       <FlatList
@@ -127,24 +129,19 @@ export default function ContactsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#000',
     fontFamily: 'Inter-Bold',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
     fontFamily: 'Inter-Regular',
   },
@@ -158,7 +155,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     fontFamily: 'Inter-Regular',
   },
   errorContainer: {
@@ -168,7 +164,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#e74c3c',
     fontFamily: 'Inter-Regular',
   },
 });

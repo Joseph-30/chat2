@@ -3,10 +3,14 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
 import { Trash2, Download, Moon, Sun, Volume2, VolumeX } from 'lucide-react-native';
+import { useTheme } from '../../hooks/useTheme';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 export default function SettingsScreen() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { colors, theme, toggleTheme, isDark } = useTheme();
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleResetGame = () => {
     Alert.alert(
@@ -21,123 +25,159 @@ export default function SettingsScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            const storyService = StoryService.getInstance();
-            await storyService.resetGame();
-            Alert.alert('Game Reset', 'Your progress has been reset. Please restart the app.');
+            try {
+              const storyService = StoryService.getInstance();
+              await storyService.resetGame();
+              Alert.alert('Game Reset', 'Your progress has been reset successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset game. Please try again.');
+            }
           },
         },
       ]
     );
   };
 
-  const handleExportSave = () => {
-    Alert.alert(
-      'Export Save',
-      'This feature will be available in a future update. Your progress is automatically saved locally.',
-      [{ text: 'OK' }]
-    );
-  };
+  const handleExportSave = async () => {
+    setIsExporting(true);
+    try {
+      const storyService = StoryService.getInstance();
+      const gameState = storyService.getGameState();
+      
+      if (!gameState) {
+        Alert.alert('Error', 'No game data found to export.');
+        return;
+      }
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    Alert.alert('Dark Mode', 'Theme changes will be applied in a future update.');
+      // Create export data
+      const exportData = {
+        version: '1.0.0',
+        exportDate: new Date().toISOString(),
+        gameData: gameState,
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const fileName = `story_save_${new Date().toISOString().split('T')[0]}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, jsonString);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Export Story Save',
+        });
+      } else {
+        Alert.alert('Success', `Save file exported to: ${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Error', 'Failed to export save file. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const toggleSound = () => {
     setIsSoundEnabled(!isSoundEnabled);
-    Alert.alert('Sound', 'Audio settings will be implemented in a future update.');
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Game Preferences</Text>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Game Preferences</Text>
         </View>
 
         {/* Game Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Game Settings</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Game Settings</Text>
           
           <Pressable style={styles.settingItem} onPress={toggleSound}>
             <View style={styles.settingLeft}>
               {isSoundEnabled ? (
-                <Volume2 size={20} color="#4A90E2" />
+                <Volume2 size={20} color={colors.primary} />
               ) : (
-                <VolumeX size={20} color="#666" />
+                <VolumeX size={20} color={colors.textSecondary} />
               )}
-              <Text style={styles.settingText}>Sound Effects</Text>
+              <Text style={[styles.settingText, { color: colors.text }]}>Sound Effects</Text>
             </View>
-            <Text style={styles.settingValue}>
+            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
               {isSoundEnabled ? 'Enabled' : 'Disabled'}
             </Text>
           </Pressable>
 
-          <Pressable style={styles.settingItem} onPress={toggleDarkMode}>
+          <Pressable style={styles.settingItem} onPress={toggleTheme}>
             <View style={styles.settingLeft}>
-              {isDarkMode ? (
-                <Moon size={20} color="#4A90E2" />
+              {isDark ? (
+                <Moon size={20} color={colors.primary} />
               ) : (
-                <Sun size={20} color="#4A90E2" />
+                <Sun size={20} color={colors.primary} />
               )}
-              <Text style={styles.settingText}>Theme</Text>
+              <Text style={[styles.settingText, { color: colors.text }]}>Theme</Text>
             </View>
-            <Text style={styles.settingValue}>
-              {isDarkMode ? 'Dark' : 'Light'}
+            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+              {isDark ? 'Dark' : 'Light'}
             </Text>
           </Pressable>
         </View>
 
         {/* Data Management */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data Management</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Data Management</Text>
           
-          <Pressable style={styles.settingItem} onPress={handleExportSave}>
+          <Pressable 
+            style={[styles.settingItem, isExporting && styles.disabledItem]} 
+            onPress={handleExportSave}
+            disabled={isExporting}
+          >
             <View style={styles.settingLeft}>
-              <Download size={20} color="#4A90E2" />
-              <Text style={styles.settingText}>Export Save</Text>
+              <Download size={20} color={isExporting ? colors.textSecondary : colors.primary} />
+              <Text style={[styles.settingText, { color: isExporting ? colors.textSecondary : colors.text }]}>
+                {isExporting ? 'Exporting...' : 'Export Save'}
+              </Text>
             </View>
           </Pressable>
 
           <Pressable style={[styles.settingItem, styles.dangerItem]} onPress={handleResetGame}>
             <View style={styles.settingLeft}>
-              <Trash2 size={20} color="#e74c3c" />
-              <Text style={[styles.settingText, styles.dangerText]}>Reset Game</Text>
+              <Trash2 size={20} color={colors.error} />
+              <Text style={[styles.settingText, { color: colors.error }]}>Reset Game</Text>
             </View>
           </Pressable>
         </View>
 
         {/* About */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.aboutText}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
+          <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
             This is an interactive story game where your choices shape the narrative. 
             Explore supernatural mysteries, build relationships, and discover multiple endings.
           </Text>
-          <Text style={styles.aboutText}>
+          <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
             The story adapts to your decisions using AI-powered content generation, 
             ensuring each playthrough feels unique and engaging.
           </Text>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={[styles.versionText, { color: colors.textSecondary }]}>Version 1.0.0</Text>
         </View>
 
         {/* Instructions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How to Play</Text>
-          <Text style={styles.instructionText}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>How to Play</Text>
+          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
             • Tap on unlocked contacts to start conversations
           </Text>
-          <Text style={styles.instructionText}>
+          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
             • Choose from multiple response options to shape the story
           </Text>
-          <Text style={styles.instructionText}>
+          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
             • Build relationships by making choices that align with characters
           </Text>
-          <Text style={styles.instructionText}>
+          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
             • New contacts unlock as you progress through the story
           </Text>
-          <Text style={styles.instructionText}>
+          <Text style={[styles.instructionText, { color: colors.textSecondary }]}>
             • Your choices determine which of five endings you'll experience
           </Text>
         </View>
@@ -149,7 +189,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   scrollView: {
     flex: 1,
@@ -157,24 +196,19 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#000',
     fontFamily: 'Inter-Bold',
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
     fontFamily: 'Inter-Regular',
   },
   section: {
-    backgroundColor: '#fff',
     marginTop: 12,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -182,7 +216,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
     marginBottom: 16,
     fontFamily: 'Inter-SemiBold',
   },
@@ -191,8 +224,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   settingLeft: {
     flexDirection: 'row',
@@ -200,37 +231,32 @@ const styles = StyleSheet.create({
   },
   settingText: {
     fontSize: 16,
-    color: '#000',
     marginLeft: 12,
     fontFamily: 'Inter-Regular',
   },
   settingValue: {
     fontSize: 16,
-    color: '#666',
     fontFamily: 'Inter-Regular',
   },
-  dangerItem: {
-    borderBottomColor: 'transparent',
+  disabledItem: {
+    opacity: 0.5,
   },
-  dangerText: {
-    color: '#e74c3c',
+  dangerItem: {
+    marginTop: 8,
   },
   aboutText: {
     fontSize: 14,
-    color: '#333',
     lineHeight: 20,
     marginBottom: 12,
     fontFamily: 'Inter-Regular',
   },
   versionText: {
     fontSize: 12,
-    color: '#999',
     marginTop: 8,
     fontFamily: 'Inter-Regular',
   },
   instructionText: {
     fontSize: 14,
-    color: '#333',
     lineHeight: 20,
     marginBottom: 8,
     fontFamily: 'Inter-Regular',
