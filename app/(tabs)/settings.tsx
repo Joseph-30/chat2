@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoryService } from '../../services/storyService';
 import { Trash2, Download, Moon, Sun, Volume2, VolumeX } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+
+// Platform-specific imports
+let FileSystem: any = null;
+let Sharing: any = null;
+
+if (Platform.OS !== 'web') {
+  FileSystem = require('expo-file-system');
+  Sharing = require('expo-sharing');
+}
 
 export default function SettingsScreen() {
   const { colors, theme, toggleTheme, isDark } = useTheme();
@@ -58,17 +65,37 @@ export default function SettingsScreen() {
 
       const jsonString = JSON.stringify(exportData, null, 2);
       const fileName = `story_save_${new Date().toISOString().split('T')[0]}.json`;
-      const fileUri = FileSystem.documentDirectory + fileName;
 
-      await FileSystem.writeAsStringAsync(fileUri, jsonString);
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/json',
-          dialogTitle: 'Export Story Save',
-        });
+      if (Platform.OS === 'web') {
+        // Web-specific implementation
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create a temporary download link
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL object
+        URL.revokeObjectURL(url);
+        
+        Alert.alert('Success', 'Save file has been downloaded to your Downloads folder.');
       } else {
-        Alert.alert('Success', `Save file exported to: ${fileUri}`);
+        // Native implementation (iOS/Android)
+        const fileUri = FileSystem.documentDirectory + fileName;
+        await FileSystem.writeAsStringAsync(fileUri, jsonString);
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Export Story Save',
+          });
+        } else {
+          Alert.alert('Success', `Save file exported to: ${fileUri}`);
+        }
       }
     } catch (error) {
       console.error('Export error:', error);
