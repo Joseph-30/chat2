@@ -19,30 +19,45 @@ export default function ContactsScreen() {
   }, []);
 
   const initializeGame = async () => {
+    console.log('[ContactsScreen] Starting initializeGame...');
     const storyService = StoryService.getInstance();
     
     try {
+      console.log('[ContactsScreen] Creating load promise...');
       // Try to load existing game with timeout
       const loadPromise = storyService.loadGame();
       const timeoutPromise = new Promise<null>((resolve) => {
+        console.log('[ContactsScreen] Setting up 5 second timeout...');
         setTimeout(() => resolve(null), 5000); // 5 second timeout
       });
       
+      console.log('[ContactsScreen] Racing load promise against timeout...');
       let state = await Promise.race([loadPromise, timeoutPromise]);
+      console.log('[ContactsScreen] Promise race completed. State:', state ? 'Game state loaded' : 'No state or timeout');
       
       if (!state) {
-        console.log('No existing game found or load timed out, showing name modal');
+        console.log('[ContactsScreen] No existing game found or load timed out, showing name modal');
         setShowNameModal(true);
         setIsLoading(false);
         return;
       }
       
+      console.log('[ContactsScreen] Setting game state:', {
+        playerName: state.playerName,
+        currentChapter: state.currentChapter,
+        charactersCount: Object.keys(state.characters).length
+      });
       setGameState(state);
     } catch (error) {
-      console.error('Failed to initialize game:', error);
-      console.log('Load failed, starting new game');
+      console.error('[ContactsScreen] Failed to initialize game - Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      console.log('[ContactsScreen] Load failed, starting new game');
       setShowNameModal(true);
     } finally {
+      console.log('[ContactsScreen] Setting isLoading to false');
       setIsLoading(false);
     }
   };

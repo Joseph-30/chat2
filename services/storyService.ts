@@ -1,67 +1,8 @@
 import { GameState, Character, StoryScene, ConversationState, Message, Choice } from '../types/story';
 import { GeminiService } from './geminiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 
 const STORAGE_KEY = 'STORY_GAME_STATE';
-
-// Web-compatible storage fallback
-const webStorage = {
-  async getItem(key: string): Promise<string | null> {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
-        return window.localStorage.getItem(key);
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  },
-  
-  async setItem(key: string, value: string): Promise<void> {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
-        window.localStorage.setItem(key, value);
-      }
-    } catch {
-      // Silently fail if storage is not available
-    }
-  },
-  
-  async removeItem(key: string): Promise<void> {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
-        window.localStorage.removeItem(key);
-      }
-    } catch {
-      // Silently fail if storage is not available
-    }
-  },
-  
-  async getAllKeys(): Promise<string[]> {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.key === 'function') {
-        return Object.keys(window.localStorage);
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  },
-  
-  async multiRemove(keys: string[]): Promise<void> {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
-        keys.forEach(key => window.localStorage.removeItem(key));
-      }
-    } catch {
-      // Silently fail if storage is not available
-    }
-  }
-};
-
-// Use appropriate storage based on platform
-const storage = Platform.OS === 'web' ? webStorage : AsyncStorage;
 
 export class StoryService {
   private static instance: StoryService;
@@ -134,10 +75,16 @@ export class StoryService {
   }
 
   async loadGame(): Promise<GameState | null> {
+    console.log('[StoryService] Starting loadGame...');
     try {
-      const savedData = await storage.getItem(STORAGE_KEY);
+      console.log('[StoryService] Attempting to get data from storage with key:', STORAGE_KEY);
+      const savedData = await AsyncStorage.getItem(STORAGE_KEY);
+      console.log('[StoryService] Retrieved data from storage:', savedData ? 'Data found' : 'No data found');
+      
       if (savedData) {
+        console.log('[StoryService] Parsing saved data...');
         const parsedData = JSON.parse(savedData);
+        console.log('[StoryService] Successfully parsed data, converting dates...');
         
         // Convert date strings back to Date objects
         this.gameState = {
@@ -158,13 +105,27 @@ export class StoryService {
           )
         };
         
+        console.log('[StoryService] Game state loaded successfully:', {
+          playerName: this.gameState.playerName,
+          currentChapter: this.gameState.currentChapter,
+          charactersCount: Object.keys(this.gameState.characters).length,
+          conversationsCount: Object.keys(this.gameState.conversations).length
+        });
+        
         return this.gameState;
       }
+      
+      console.log('[StoryService] No saved data found, returning null');
+      return null;
     } catch (error) {
-      console.error('Failed to load game:', error);
+      console.error('[StoryService] Failed to load game - Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       // Don't throw error, just return null to allow new game creation
+      return null;
     }
-    return null;
   }
 
   async saveGame(): Promise<void> {
@@ -191,7 +152,7 @@ export class StoryService {
         )
       };
       
-      await storage.setItem(STORAGE_KEY, JSON.stringify(gameStateToSave));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(gameStateToSave));
     } catch (error) {
       console.error('Failed to save game:', error);
       // Don't throw error, just log it
@@ -489,14 +450,14 @@ export class StoryService {
 
   async resetGame(): Promise<void> {
     try {
-      await storage.removeItem(STORAGE_KEY);
+      await AsyncStorage.removeItem(STORAGE_KEY);
       this.gameState = null;
       
       // Force a complete reset by clearing any cached data
-      const keys = await storage.getAllKeys();
+      const keys = await AsyncStorage.getAllKeys();
       const gameKeys = keys.filter(key => key.startsWith('STORY_') || key === STORAGE_KEY);
       if (gameKeys.length > 0) {
-        await storage.multiRemove(gameKeys);
+        await AsyncStorage.multiRemove(gameKeys);
       }
     } catch (error) {
       console.error('Failed to reset game:', error);
