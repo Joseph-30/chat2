@@ -18,9 +18,31 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isChoiceLoading, setIsChoiceLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     loadConversation();
+    
+    // Set up real-time conversation updates
+    if (characterId) {
+      const storyService = StoryService.getInstance();
+      unsubscribeRef.current = storyService.onConversationUpdate(characterId, () => {
+        // Update the UI when conversation changes
+        const currentState = storyService.getGameState();
+        if (currentState && currentState.conversations[characterId]) {
+          setConversation(currentState.conversations[characterId]);
+          setGameState(currentState);
+          setCharacter(currentState.characters[characterId]);
+        }
+      });
+    }
+    
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
   }, [characterId]);
 
   useEffect(() => {
@@ -39,6 +61,7 @@ export default function ChatScreen() {
       
       // First ensure we have a game state
       let state = storyService.getGameState();
+      
       if (!state) {
         // Try to load from storage
         state = await storyService.loadGame();
@@ -110,18 +133,8 @@ export default function ChatScreen() {
       // Show temporary emotion overlay
       setShowEmotion('thinking...');
       
-      // Make choice and get updated conversation
-      const updatedConversation = await storyService.makeChoice(characterId, choiceId);
-      
-      // Update local state immediately
-      setConversation(updatedConversation);
-      
-      // Update game state
-      const newGameState = storyService.getGameState();
-      if (newGameState) {
-        setGameState(newGameState);
-        setCharacter(newGameState.characters[characterId]);
-      }
+      // Make choice - the conversation will be updated via the callback system
+      await storyService.makeChoice(characterId, choiceId);
       
       setTimeout(() => setShowEmotion(null), 1500);
       

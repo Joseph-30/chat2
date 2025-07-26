@@ -24,6 +24,12 @@ export class AIService {
 
   async generateStoryContent(prompt: string, context: any): Promise<string> {
     try {
+      // Check if API key is available
+      if (!OPENROUTER_API_KEY) {
+        console.error('OpenRouter API key is not configured');
+        return 'Configuration error... check your API key.';
+      }
+
       const fullPrompt = `
         You are writing for an interactive horror/romance story game set in a near-future town with supernatural phenomena.
         The player is discovering their alternate timeline self is missing.
@@ -42,7 +48,15 @@ export class AIService {
         - Return ONLY the story text, no markdown or code blocks
       `;
 
-      const response = await fetch(OPENROUTER_API_URL, {
+      console.log('Making OpenRouter API call...');
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('API request timed out')), 10000); // 10 second timeout
+      });
+      
+      // Create the API request promise
+      const apiPromise = fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
@@ -61,12 +75,18 @@ export class AIService {
         })
       });
 
+      // Race between API call and timeout
+      const response = await Promise.race([apiPromise, timeoutPromise]) as Response;
+
       if (!response.ok) {
-        console.error('OpenRouter API HTTP error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('OpenRouter API HTTP error:', response.status, response.statusText, errorText);
         return 'Connection lost... try again later.';
       }
 
       const data: OpenRouterResponse = await response.json();
+      console.log('OpenRouter API response received');
+      
       const responseText = data.choices?.[0]?.message?.content;
       
       if (!responseText) {
@@ -89,6 +109,7 @@ export class AIService {
         return 'The signal fades... strange...';
       }
       
+      console.log('Generated story content successfully');
       return cleanText;
       
     } catch (error) {
@@ -99,6 +120,12 @@ export class AIService {
 
   async generateChoices(context: any, characterId: string): Promise<any[]> {
     try {
+      // Check if API key is available
+      if (!OPENROUTER_API_KEY) {
+        console.error('OpenRouter API key is not configured');
+        return this.getFallbackChoices(context, characterId);
+      }
+
       const prompt = `
         Generate 3-4 smart, contextual chat response choices for this interactive horror/romance story:
         
@@ -131,6 +158,8 @@ export class AIService {
         Make each choice distinct and story-relevant.
       `;
 
+      console.log('Generating choices for character:', characterId);
+
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
@@ -150,8 +179,15 @@ export class AIService {
         })
       });
 
+      if (!response.ok) {
+        console.error('OpenRouter API HTTP error for choices:', response.status, response.statusText);
+        return this.getFallbackChoices(context, characterId);
+      }
+
       const data: OpenRouterResponse = await response.json();
       const choicesText = data.choices?.[0]?.message?.content || '[]';
+      
+      console.log('Raw choices response:', choicesText);
       
       try {
         // Clean the response text - remove markdown code blocks
@@ -167,6 +203,7 @@ export class AIService {
         
         // Validate and return choices
         if (Array.isArray(choices) && choices.length > 0) {
+          console.log('Generated choices:', choices);
           return choices.map(choice => ({
             text: choice.text || "Continue...",
             consequence: choice.consequence || "neutral response",
@@ -178,43 +215,46 @@ export class AIService {
         console.error('Raw response:', choicesText);
       }
       
-      // Enhanced fallback choices based on context
-      const relationshipLevel = context.relationshipLevel || 0;
-      const storyStage = context.storyProgression || 'developing';
+      // Fallback to context-based choices
+      return this.getFallbackChoices(context, characterId);
       
-      if (storyStage === 'beginning') {
-        return [
-          { text: "Tell me more about this", consequence: "shows interest in character's story", relationshipEffect: { [characterId]: 1 } },
-          { text: "That sounds suspicious...", consequence: "character becomes more defensive", relationshipEffect: { [characterId]: -1 } },
-          { text: "I'm here to help", consequence: "builds trust with character", relationshipEffect: { [characterId]: 2 } },
-          { text: "Why should I trust you?", consequence: "challenges character's motives", relationshipEffect: { [characterId]: 0 } }
-        ];
-      } else if (storyStage === 'developing') {
-        return [
-          { text: "What aren't you telling me?", consequence: "pushes for deeper truth", relationshipEffect: { [characterId]: 0 } },
-          { text: "I believe you", consequence: "strengthens bond", relationshipEffect: { [characterId]: 2 } },
-          { text: "This is getting dangerous", consequence: "shows concern", relationshipEffect: { [characterId]: 1 } },
-          { text: "Let's investigate together", consequence: "commits to shared adventure", relationshipEffect: { [characterId]: 2 } }
-        ];
-      } else if (storyStage === 'climax') {
-        return [
-          { text: "We need to stop this now!", consequence: "takes decisive action", relationshipEffect: { [characterId]: 1 } },
-          { text: "I won't let anything happen to you", consequence: "protective declaration", relationshipEffect: { [characterId]: 3 } },
-          { text: "Maybe we should run...", consequence: "suggests retreat", relationshipEffect: { [characterId]: -1 } },
-          { text: "Trust me, I have a plan", consequence: "leads with confidence", relationshipEffect: { [characterId]: 2 } }
-        ];
-      } else {
-        return [
-          { text: "What happens now?", consequence: "seeks closure", relationshipEffect: { [characterId]: 0 } },
-          { text: "I'm glad we're safe", consequence: "expresses relief", relationshipEffect: { [characterId]: 1 } },
-          { text: "This isn't over, is it?", consequence: "hints at continuation", relationshipEffect: { [characterId]: 0 } },
-          { text: "Thank you for everything", consequence: "shows gratitude", relationshipEffect: { [characterId]: 2 } }
-        ];
-      }
     } catch (error) {
       console.error('Choice generation error:', error);
+      return this.getFallbackChoices(context, characterId);
+    }
+  }
+
+  private getFallbackChoices(context: any, characterId: string): any[] {
+    const relationshipLevel = context.relationshipLevel || 0;
+    const storyStage = context.storyProgression || 'developing';
+    
+    if (storyStage === 'beginning') {
       return [
-        { text: "...", consequence: "neutral response", relationshipEffect: { [characterId]: 0 } }
+        { text: "Tell me more about this", consequence: "shows interest in character's story", relationshipEffect: { [characterId]: 1 } },
+        { text: "That sounds suspicious...", consequence: "character becomes more defensive", relationshipEffect: { [characterId]: -1 } },
+        { text: "I'm here to help", consequence: "builds trust with character", relationshipEffect: { [characterId]: 2 } },
+        { text: "Why should I trust you?", consequence: "challenges character's motives", relationshipEffect: { [characterId]: 0 } }
+      ];
+    } else if (storyStage === 'developing') {
+      return [
+        { text: "What aren't you telling me?", consequence: "pushes for deeper truth", relationshipEffect: { [characterId]: 0 } },
+        { text: "I believe you", consequence: "strengthens bond", relationshipEffect: { [characterId]: 2 } },
+        { text: "This is getting dangerous", consequence: "shows concern", relationshipEffect: { [characterId]: 1 } },
+        { text: "Let's investigate together", consequence: "commits to shared adventure", relationshipEffect: { [characterId]: 2 } }
+      ];
+    } else if (storyStage === 'climax') {
+      return [
+        { text: "We need to stop this now!", consequence: "takes decisive action", relationshipEffect: { [characterId]: 1 } },
+        { text: "I won't let anything happen to you", consequence: "protective declaration", relationshipEffect: { [characterId]: 3 } },
+        { text: "Maybe we should run...", consequence: "suggests retreat", relationshipEffect: { [characterId]: -1 } },
+        { text: "Trust me, I have a plan", consequence: "leads with confidence", relationshipEffect: { [characterId]: 2 } }
+      ];
+    } else {
+      return [
+        { text: "What happens now?", consequence: "seeks closure", relationshipEffect: { [characterId]: 0 } },
+        { text: "I'm glad we're safe", consequence: "expresses relief", relationshipEffect: { [characterId]: 1 } },
+        { text: "This isn't over, is it?", consequence: "hints at continuation", relationshipEffect: { [characterId]: 0 } },
+        { text: "Thank you for everything", consequence: "shows gratitude", relationshipEffect: { [characterId]: 2 } }
       ];
     }
   }
